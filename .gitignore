@@ -1,0 +1,4 @@
+node_modules
+log
+.vscode
+src/config/*-config.yaml

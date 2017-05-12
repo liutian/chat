@@ -1,0 +1,31 @@
+---
+
+default: &default
+  port: 40000
+  cookie_keys: ichat-cookie
+  session_keys: ichat-session
+  cookie_session_expiry: 7200000
+  allowOrigin: '*'
+
+  platform_username: liuss
+  platform_password: liuss123
+
+  # db 设置
+  mongo_address: mongodb://192.168.16.45/ichat
+  mongo_pool: 20
+
+  # 此处为绝对路径
+  log_path:
+
+  redis_prefix: chat_
+  redis_address: 192.168.16.45:6379
+  redis_app_prefix: app_
+  redis_client_token_prefix: c_token_
+
+
+
+test:
+  <<: *default
+  port: 50000
+
+
