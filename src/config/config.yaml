@@ -4,7 +4,8 @@ default: &default
   port: 40000
   cookie_keys: ichat-cookie
   session_keys: ichat-session
-  cookie_session_expiry: 7200000
+  #koa-session 把失效日期存入cookie加密字段中所以即使服务器重启还是能计算失效日期
+  cookie_session_expiry: 10000
   allowOrigin: '*'
 
   platform_username: liuss
