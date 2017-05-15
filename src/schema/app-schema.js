@@ -7,8 +7,8 @@ const appSchema = new Schema({
   //秘钥由服务器自动生成
   secret: { type: String, required: true },
   //模拟用户用来和普通用户建立会话进行消息往来
-  simUser: { type: Schema.Types.ObjectId, ref: 'user', required: true },
-  name: { type: String, required: true },
+  simUser: { type: Schema.Types.ObjectId, ref: 'user' },
+  name: { type: String, required: true, unique: true, trim: true },
   des: { type: String },
   //每个用户拥有的会话最大数(拥有指用户属于会话的超级管理员)
   maxSessionCount: { type: Number, default: 1000000, required: true },

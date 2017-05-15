@@ -16,7 +16,7 @@ const sessionSchema = new Schema({
     default: 1
   },
   //群聊时需要,私聊会话为对方名称
-  name: { type: String, required: true },
+  name: { type: String, required: true, trim: true },
   letterName: { type: String, required: true, lowercase: true },
   avator: { type: String },
   joinStrategy: {//会话加入策略

@@ -4,10 +4,12 @@ const Router = require('koa-router');
 const session = require('koa-session');
 const bodyParser = require('koa-bodyparser');
 const mongoose = require('mongoose');
+const util = require('util');
 
 const config = require('../config');
 const cert = require('../util/certification.js');
 const logger = require('log4js').getLogger('api-index');
+const apiError = require('../util/api-error');
 
 const app = new Koa();
 const router = new Router();
@@ -20,9 +22,6 @@ app.keys = [(config.cookie_keys || 'ichat-cookie-zaq12wsx')];
 
 //记录响应时间
 app.use(responseTime);
-
-//404 返回 {} 该系统没有页面面向
-app.use(patch404);
 
 // 客户端接口认证
 const sessionMiddleware = session({
@@ -59,36 +58,29 @@ async function responseTime(ctx, next) {
   ctx.set('X-Response-Time', (Date.now() - start) + 'ms');
 }
 
-async function patch404(ctx, next) {
-  await next();
-  if (ctx.status == 404 && !ctx.body) {
-    ctx.body = {};
-  }
-}
-
 function onerror(err) {
   if (404 == err.status) return;
 
-  //如果服务器报错打印错误信息到日志中
-  if (!err.status || err.status == 500) {
-    logger.error(err.stack || err.toString());
+  if (util.isString(err.message) && !err.expose) {
+    err.message = err.message.replace(/"/gmi, '\\"');
   }
 
   //如果有错误码追加错误码到错误信息中
   if (err.code) {
-    err.expose = true;
-    err.message += ' \n(code:' + err.code + ')';
+    err.message = '{"code": ' + err.code + ',"msg": "' + (apiError.codeMap['code_' + err.code] || err.message) + '"}';
   }
 
-  //如果有数据库字段校验错误则返回错误信息
   if (err instanceof mongoose.Error) {
     err.expose = true;
     err.status = 400;
 
-    if (err instanceof mongoose.Error.ValidationError) {
-      for (var name in err.errors) {
-        err.message += '\n' + err.errors[name];
-      }
-    }
+    err.message = '{"code": 1015,"msg": "' + (err.message || 'db error') + '"}';
+  }
+
+  //如果服务器报错打印错误信息到日志中
+  if (!err.status || err.status == 500) {
+    logger.error(err.stack || err.toString());
+    err.expose = true;
+    err.message = '{"code": 9999,"msg": "' + (err.message || 'server error') + '"}';
   }
 }

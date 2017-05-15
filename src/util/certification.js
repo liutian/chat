@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 
 const config = require('../config');
-const appServer = require('../server/app-server');
+const appService = require('../service/app-service');
 const redisConn = require('../util/redis-factory').getInstance(true);
 
 //第三方服务器接口访问校验
@@ -22,7 +22,7 @@ exports.server = async function serverCert(ctx, next) {
 
   //**************************************************
   //**********后续改进，直接从缓存中读取，通过redis广播订阅机制保持同步更新
-  let app = await appServer.get(appKey);
+  let app = await appService.get(appKey);
   if (!app) {
     ctx.throw(401, { code: 1003 });
   } else if (+app.lock === 1) {

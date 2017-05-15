@@ -11,9 +11,10 @@ const userSchema = new Schema({
     enum: [0, 1],
     default: 0
   },
-  refKey: { type: String },//第三方服务器用户系统唯一标示
-  nickname: { type: String, required: true },
-  letterName: { type: String, required: true, lowercase: true },//取nickname单词的首字母
+  //第三方服务器用户系统唯一标示，如果是模拟用户对应值为：sim + appId
+  refKey: { type: String, unique: 1, required: true, trim: true },
+  nickname: { type: String, required: true, trim: true },
+  letterNickname: { type: String, required: true, lowercase: true },//取nickname单词的首字母
   avator: { type: String },
   sex: {
     type: Number,
