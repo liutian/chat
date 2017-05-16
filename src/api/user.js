@@ -7,6 +7,9 @@ module.exports = function (router) {
   router.get('/server-api/user/auth', auth);
 
   router.post('/server-api/user', saveUser);
+
+  router.post('/api/user', updateUser);
+
 }
 
 async function saveUser(ctx, next) {
@@ -20,6 +23,13 @@ async function saveUser(ctx, next) {
     let result = await userService.createUser(ctx.request.body);
     ctx.body = { id: result.id };
   }
+}
+
+async function updateUser(ctx, next) {
+  ctx.request.body.id = ctx.session.user.id;
+  ctx.request.body.appId = ctx.session.user.appId;
+  await userService.updateUser(ctx.request.body);
+  ctx.body = {};
 }
 
 async function auth(ctx, next) {

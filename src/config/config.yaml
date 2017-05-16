@@ -5,7 +5,7 @@ default: &default
   cookie_keys: ichat-cookie
   session_keys: ichat-session
   #koa-session 把失效日期存入cookie加密字段中所以即使服务器重启还是能计算失效日期
-  cookie_session_expiry: 10000
+  cookie_session_expiry: 120 #单位分钟
   allowOrigin: '*'
 
   platform_username: liuss

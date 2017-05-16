@@ -25,6 +25,7 @@ const userSchema = new Schema({
     ],
     default: 1
   },
+  location: { type: [Number], index: '2d' },
   del: {
     type: Number,
     enum: [0, 1],

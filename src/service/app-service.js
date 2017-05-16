@@ -1,10 +1,12 @@
 const mongoose = require('mongoose');
+const util = require('util');
 
 const redisConn = require('../util/redis-factory').getInstance(true);
 const config = require('../config');
 const apiError = require('../util/api-error');
 const userService = require('./user-service');
 const _util = require('../util/util');
+
 
 const appModel = mongoose.model('app');
 const userModel = mongoose.model('user');
@@ -36,7 +38,7 @@ async function createAppFn(data) {
   newApp.simUser = newUser;
   await newApp.save();
 
-  await syncAppToRedis(newApp);
+  await syncAppToRedis(newApp.toObject());
 
   return newApp;
 }
@@ -48,12 +50,14 @@ async function updateAppFn(data) {
 
   await appModel.findByIdAndUpdate(data.id, data);
 
+  await syncAppToRedis(data);
 }
 
 async function syncAppToRedis(app) {
-  let appObj = app.toObject();
-  appObj.simUser = app.simUser.id;
-  await redisConn.hmset(config.redis_app_prefix + app.id, appObj);
+  if (util.isObject(app.simUser) && app.simUser.id) {
+    app.simUser = app.simUser.id;
+  }
+  await redisConn.hmset(config.redis_app_prefix + app.id, app);
 }
 
 async function getFn(id) {
@@ -61,7 +65,7 @@ async function getFn(id) {
   if (!app || !app.id || app.id != id) {
     app = await appModel.findById(id);
     if (app) {
-      await syncAppToRedis(app);
+      await syncAppToRedis(app.toObject());
     } else {
       return null;
     }

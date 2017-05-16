@@ -83,7 +83,7 @@ async function authFn(uid, appId) {
   let tokenKey = config.redis_client_token_prefix + token;
   let userObj = {
     id: user.id,
-    appKey: user.appId,
+    appId: user.appId,
     refKey: user.refKey
   }
   //token有效期为60秒，同时一个token仅提供一次授权登录

@@ -26,7 +26,7 @@ app.use(responseTime);
 // 客户端接口认证
 const sessionMiddleware = session({
   key: (config.session_keys || 'ichat-session-mko09ijn'),
-  maxAge: config.cookie_session_expiry
+  maxAge: config.cookie_session_expiry * 1000 * 60
 }, app);
 router.all('/api/*', sessionMiddleware, cert.client, bodyParser());
 

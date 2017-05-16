@@ -3,7 +3,7 @@ const Schema = mongoose.Schema;
 
 const messageSchema = new Schema({
   //从0递增+1
-  msgId: { type: Number, required: true, index: true },
+  // msgId: { type: Number, required: true, index: true },
   sessionId: { type: Schema.Types.ObjectId, required: true },
   appId: { type: Schema.Types.ObjectId, required: true },
   //消息发送方
