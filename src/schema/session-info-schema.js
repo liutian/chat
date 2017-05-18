@@ -4,6 +4,7 @@ const Schema = mongoose.Schema;
 const sessionInfoSchema = new Schema({
   sessionId: { type: Schema.Types.ObjectId, required: true },
   userId: { type: Schema.Types.ObjectId, required: true },
+  appId: { type: Schema.Types.ObjectId, required: true },
   startMsgId: Number,//会话进行查询时开始边界
   endMsgId: Number,//会话进行查询时的结束边界
   nickName: String,//在该会话中的昵称

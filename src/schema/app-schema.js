@@ -24,6 +24,8 @@ const appSchema = new Schema({
     enum: [0, 1],
     default: 0
   },
+  pushAuth: { type: String },
+  pushApnsName: { type: String },
   updateDate: { type: Date, default: Date.now, required: true },
   createDate: { type: Date, default: Date.now, required: true },
   extra: { type: String }//额外扩展字段(建议保存json字符串)

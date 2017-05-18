@@ -28,7 +28,7 @@ const sessionSchema = new Schema({
     ],
     default: 1
   },
-  inviteStrategy: {//会话邀请策略
+  inviteStrategy: {//会话邀请策略只针对普通用户有效
     type: Number,
     enum: [
       1,//会话中的任何人都可以邀请他人加入
@@ -42,12 +42,11 @@ const sessionSchema = new Schema({
   des: { type: String },//会话描述
   sumMemberCount: { type: Number },//成员加入总次数
   maxMemberCount: { type: Number },//限制会话中成员数
-  msgCount: { type: Number, required: true, default: 0 },//会话中的总消息数
-  latestMessages: [Schema.Types.Mixed],//会话中最新的一条消息
+  msgMaxCount: { type: Number, required: true, default: 0 },//会话中的总消息数
+  latestMessages: [Schema.Types.Mixed],//会话中最新的几条消息
   owner: { type: Schema.Types.ObjectId, ref: 'user', required: true },//会话所有者
   admins: [{ type: Schema.Types.ObjectId, ref: 'user' }],
   members: [{ type: Schema.Types.ObjectId, ref: 'user' }],//会话中的成员，包括管理员和拥有者
-  multiple: { type: Boolean, default: false },//是否是多人会话
   freeze: {//禁止成员变动(不包括主动退出群)只有会话所有者才能操作
     type: Number,
     enum: [0, 1],

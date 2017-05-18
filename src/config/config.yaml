@@ -21,7 +21,11 @@ default: &default
   redis_prefix: chat_
   redis_address: 192.168.16.45:6379
   redis_app_prefix: app_
+  redis_user_prefix: user_
   redis_client_token_prefix: c_token_
+
+  push_url: http://127.0.0.1:3000/api/auth/push
+  push_apns_name: default
 
 
 

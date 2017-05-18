@@ -3,12 +3,14 @@ const Schema = mongoose.Schema;
 
 const messageSchema = new Schema({
   //从0递增+1
-  // msgId: { type: Number, required: true, index: true },
+  id: { type: Number, required: true },
   sessionId: { type: Schema.Types.ObjectId, required: true },
   appId: { type: Schema.Types.ObjectId, required: true },
   //消息发送方
   from: { type: Schema.Types.ObjectId, ref: 'user', required: true },
   content: { type: String, required: true, trim: true },
+  textContent: { type: String },
+  pushResult: { type: String },
   //消息内容类型
   contentType: {
     type: Number,
@@ -44,6 +46,7 @@ const messageSchema = new Schema({
     required: true,
     default: 1
   },
+  apnsName: { type: String },
   //是否接收离线消息
   leaveMessage: {
     type: Number,

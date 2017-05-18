@@ -63,6 +63,12 @@ exports.client = async function clientCert(ctx, next) {
     ctx.session.user = JSON.parse(user);
   }
 
+  //判断app是否有效
+  let app = await appService.get(ctx.session.user.appId);
+  if (app.lock == 1) apiError.throw(1018);
+  if (app.del == 1) apiError.throw(1019);
+
+
   await next();
 }
 
