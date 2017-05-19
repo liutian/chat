@@ -14,7 +14,7 @@ module.exports = function (router) {
    * @apiParam {String} [avator] 会话头像
    * @apiParam {Number} [joinStrategy] 加入策略 1:自由加入 2:需要审核 3拒绝加入
    * @apiParam {Number} [inviteStrategy] 邀请策略 1:会话中的任何人都可以邀请他人加入 2:只有管理员才可以邀请他人加入
-   *
+   * @apiParam {[Object]} members 邀请列表 [{type: String,id: String}] type => U:用户 S:会话
    *
    * @apiSuccess {String} id 会话ID
    *

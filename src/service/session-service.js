@@ -51,6 +51,9 @@ async function createFn(data) {
   //存储会话
   let newSession = await sessionModel.create(data);
 
+  //创建用户会话关联信息
+  await updateSessionInfo(founder.appId, newSession.id, [founder.id]);
+
   //处理邀请加入操作
   if (oldData.members && oldData.members.length > 0) {
     await _invite(app, newSession, oldData.members, founder);
