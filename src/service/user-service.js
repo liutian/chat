@@ -68,33 +68,11 @@ async function authFn(uid, appId, expiry) {
   }
 
   //expiry单位小时
-  expiry = Number.isInteger(expiry) ? expiry : null;
-
+  expiry = Number.isInteger(expiry) ? (Date.now() + (expiry * 3600000)) : null;
   //生成token
-  let token;
-  for (let i = 0; i < 5; i++) {
-    try {
-      token = await _util.random();
-      let isExists = await redisConn.exists(config.redis_client_token_prefix + token);
-      if (!isExists) {
-        break;
-      }
-    } catch (e) {
-      logger.warn('client auth error: ' + e);
-    }
-  }
-  //如果多次无法生成token则直接报错
-  if (!token) apiError.throw(1008, 429);
+  let token = await _util.random(5);
+  userModel.findByIdAndUpdate(uid, { token: token, expiry: expiry });
 
-  //保存token信息到缓存中
-  let tokenKey = config.redis_client_token_prefix + token;
-  let userObj = {
-    id: user.id,
-    appId: user.appId.toString(),
-    refKey: user.refKey
-  }
-  //token有效期为60秒，同时一个token仅提供一次授权登录
-  await redisConn.multi().set(tokenKey, JSON.stringify(userObj)).expire(tokenKey, expiry ? expiry * 3600 : 60).exec();
 
   return { token: token };
 }

@@ -26,6 +26,8 @@ const userSchema = new Schema({
     default: 1
   },
   location: { type: [Number], index: '2d' },
+  token: { type: String },
+  expiry: { type: Number },
   del: {
     type: Number,
     enum: [0, 1],

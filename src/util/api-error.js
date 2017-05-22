@@ -11,8 +11,8 @@ exports.codeMap = {
   code_1006: '服务器接口认证失败',
   code_1007: '请求参数缺失',
   code_1008: '生成token失败',
-  code_1009: '客户端认证缺少Token',
-  code_1010: '客户端认证Token无效',
+  code_1009: '客户端认证 缺少Token',
+  code_1010: '客户端认证 Token无效',
   code_1011: '用户已锁定',
   code_1012: '用户已删除',
   code_1013: '无权操作该用户',
@@ -26,7 +26,8 @@ exports.codeMap = {
   code_1021: '会话已删除',
   code_1022: '会话已冻结',
   code_1023: '无权操作该会话',
-  code_1024: '无权发消息'
+  code_1024: '无权发消息',
+  code_1025: '客户端认证 Token有效期已过'
 }
 
 exports.throw = function throwFn(msg, status) {

@@ -1,3 +1,4 @@
+const userModel = require('mongoose').model('user');
 const crypto = require('crypto');
 
 const config = require('../config');
@@ -52,14 +53,14 @@ exports.client = async function clientCert(ctx, next) {
   }
 
   if (!ctx.session || !ctx.session.user) {
-
-    let user = await redisConn.get(config.redis_client_token_prefix + ctx.get('Token'));
+    let userId = ctx.get('UserId');
+    let token = ctx.get('Token');
+    let user = await userModel.findOne({ _id: userId, token: token }, 'appId refKey expiry');
     if (!user) {
       ctx.throw(401, { code: 1010 });
+    } else if (Date.now() > user.expiry) {
+      ctx.throw(401, { code: 1025 });
     }
-    // else {
-    //   await redisConn.del(config.redis_client_token_prefix + ctx.get('Token'));
-    // }
 
     ctx.session.user = JSON.parse(user);
   }
