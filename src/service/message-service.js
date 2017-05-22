@@ -64,7 +64,7 @@ async function sendMessageFn(data) {
     room: data.sessionId,
     pushData: data,
     pushAuth: app.pushAuth,
-    apnsName: util.isString(data.apnsName) ? data.apnsName : app.apnsName,
+    apnsName: util.isString(data.apnsName) ? data.apnsName : app.pushApnsName,
     leaveMessage: data.leaveMessage
   }).then(function () {
     messageModal.findByIdAndUpdate(data.id, { pushResult: 'ok' });
