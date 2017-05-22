@@ -89,6 +89,7 @@ async function updateUser(ctx, next) {
 async function auth(ctx, next) {
   let uid = ctx.request.query.uid;
   let appId = ctx.get('AppKey');
-  let result = await userService.auth(uid, appId);
+  let expiry = ctx.request.query.expiry;
+  let result = await userService.auth(uid, appId, expiry);
   ctx.body = result;
 }

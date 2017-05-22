@@ -50,7 +50,7 @@ async function updateUserFn(data) {
 }
 
 
-async function authFn(uid, appId) {
+async function authFn(uid, appId, expiry) {
   if (!uid) apiError.throw(1007);
   //该出不读缓存，防止缓存数据有误造成不必要的后果
   let user = await userModel.findById(uid, 'appId sim refKey');
@@ -63,7 +63,12 @@ async function authFn(uid, appId) {
     apiError.throw(1011, 401);
   } else if (user.del === 1) {
     apiError.throw(1012, 401);
+  } else if (expiry && expiry <= 0) {
+    apiError.throw('expiry must > 0 ');
   }
+
+  //expiry单位小时
+  expiry = Number.isInteger(expiry) ? expiry : null;
 
   //生成token
   let token;
@@ -89,7 +94,7 @@ async function authFn(uid, appId) {
     refKey: user.refKey
   }
   //token有效期为60秒，同时一个token仅提供一次授权登录
-  await redisConn.multi().set(tokenKey, JSON.stringify(userObj)).expire(tokenKey, 60).exec();
+  await redisConn.multi().set(tokenKey, JSON.stringify(userObj)).expire(tokenKey, expiry ? expiry * 3600 : 60).exec();
 
   return { token: token };
 }
