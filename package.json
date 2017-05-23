@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build-doc": "rimraf --doc && ./node_modules/.bin/apidoc -i src/api -o doc"
   },
   "author": "",
   "license": "ISC",
@@ -19,5 +20,14 @@
     "log4js": "1.1.1",
     "mongoose": "4.9.6",
     "yargs": "7.1.0"
+  },
+  "devDependencies": {
+    "apidoc": "0.17.6"
+  },
+  "apidoc": {
+    "template": {
+      "withCompare": true,
+      "withGenerator": true
+    }
   }
 }

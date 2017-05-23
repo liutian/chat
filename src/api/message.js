@@ -8,6 +8,8 @@ module.exports = function (router) {
    * @apiName send message
    * @apiGroup message
    *
+   * @apiUse client_auth
+   *
    * @apiParam {String} sessionId 会话ID
    * @apiParam {Object} content 消息内容
    * @apiParam {String} [textContent] 消息纯文本,推送时使用

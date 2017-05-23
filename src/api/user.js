@@ -10,6 +10,8 @@ module.exports = function (router) {
      * @apiName create User
      * @apiGroup user
      *
+     * @apiUse server_auth
+     *
      * @apiParam {String} nickname 用户昵称
      * @apiParam {String} refKey 用户在第三方服务器中的唯一标示一般为用户ID
      * @apiParam {String} [avator] 用户头像
@@ -19,11 +21,14 @@ module.exports = function (router) {
      * @apiSuccess {String} id 用户唯一标示
      *
      */
+  router.post('/server-api/user/create', serverCreateUser);
 
   /**
      * @api {post} /server-api/user 更新用户信息
      * @apiName update User
      * @apiGroup user
+     *
+     * @apiUse server_auth
      *
      * @apiParam {String} refKey 用户在第三方服务器中的唯一标示一般为用户ID
      * @apiParam {String} [nickname] 用户昵称
@@ -34,13 +39,14 @@ module.exports = function (router) {
      * @apiParam {Number} [lock] 是否锁定
      *
      */
-  router.post('/server-api/user/create', serverCreateUser);
   router.post('/server-api/user/update', serverUpdateUser);
 
   /**
      * @api {get} /server-api/user/auth 获取客户端认证Token
      * @apiName get client Token
      * @apiGroup user
+     *
+     * @apiUse server_auth
      *
      * @apiParam {String} refKey 用户在第三方服务器中的唯一标示一般为用户ID
      *
@@ -52,6 +58,8 @@ module.exports = function (router) {
      * @api {post} /api/user 更新用户信息 [客户端]
      * @apiName update User[client]
      * @apiGroup user
+     *
+     * @apiUse client_auth
      *
      * @apiParam {String} [nickname] 用户昵称
      * @apiParam {String} [avator] 用户头像

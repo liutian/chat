@@ -9,6 +9,8 @@ module.exports = function (router) {
    * @apiName create App[admin]
    * @apiGroup app
    *
+   * @apiUse platform_auth
+   *
    * @apiParam {String} name 名称
    * @apiParam {String} [des] 描述
    * @apiParam {Number} [maxSessionCount] 每个用户拥有的会话最大数(拥有指用户属于会话的超级管理员)
@@ -25,6 +27,8 @@ module.exports = function (router) {
    * @api {post} /platform-api/app 更新App[超级管理员]
    * @apiName update App[admin]
    * @apiGroup app
+   *
+   * @apiUse platform_auth
    *
    * @apiParam {String} id app唯一标示
    * @apiParam {String} [des] 描述
@@ -44,6 +48,8 @@ module.exports = function (router) {
    * @api {post} /server-api/app 更新App[第三方服务器]
    * @apiName update App
    * @apiGroup app
+   *
+   * @apiUse server_auth
    *
    * @apiParam {String} [des] 描述
    * @apiParam {Number} [maxSessionCount] 每个用户拥有的会话最大数(拥有指用户属于会话的超级管理员)

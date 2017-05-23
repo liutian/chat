@@ -7,6 +7,8 @@ module.exports = function (router) {
    * @apiName create-session
    * @apiGroup session
    *
+   * @apiUse client_auth
+   *
    * @apiParam {String} name 会话名称
    * @apiParam {String} [des] 会话描述
    * @apiParam {Number} [maxMemberCount] 会话最大成员数
@@ -25,6 +27,8 @@ module.exports = function (router) {
    * @api {post} /api/invite 邀请加入会话
    * @apiName invite
    * @apiGroup session
+   *
+   * @apiUse client_auth
    *
    * @apiParam {String} sessionId 会话ID
    * @apiParam {[Object]} members 邀请列表 [{type: String,id: String}] type => U:用户 S:会话

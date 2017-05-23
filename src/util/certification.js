@@ -82,14 +82,14 @@ exports.client = async function clientCert(ctx, next) {
 
 //平台管理接口访问校验
 exports.platform = async function platformCert(ctx, next) {
-  let appKey = ctx.get('AppKey');
+  let adminKey = ctx.get('AdminKey');
   let nonce = ctx.get('Nonce');
   let timestamp = ctx.get('Timestamp');
   let signature = ctx.get('Signature');
-  if (!appKey || !nonce || !timestamp || !signature) {
+  if (!adminKey || !nonce || !timestamp || !signature) {
     ctx.throw(401, { code: 1001 });
   }
-  if (appKey !== config.platform_username) {
+  if (adminKey !== config.platform_username) {
     ctx.throw(401, { code: 1003 });
   }
 
