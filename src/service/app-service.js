@@ -46,7 +46,7 @@ async function createAppFn(data) {
   newApp.simUser = newUser.id;
   await newApp.save();
 
-  return newApp;
+  return newApp.obj;
 }
 
 async function updateAppFn(data) {
@@ -76,9 +76,7 @@ async function getFn(id) {
   if (!app || !app.id || app.id != id) {
     app = await appModel.findById(id, '-extra');
     if (app) {
-      app = app.toObject();
-      app.id = app._id;
-      await syncAppToRedis(app);
+      await syncAppToRedis(app.obj);
     } else {
       return null;
     }

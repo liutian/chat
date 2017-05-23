@@ -16,7 +16,7 @@ module.exports = function (router) {
    * @apiParam {String} [pushAuth] 推送服务器认证信息
    * @apiParam {String} [pushApnsName] 推送消息的apnsName 详情见推送服务器接口文档说明
    *
-   * @apiSuccess {String} _id app唯一标示
+   * @apiSuccess {String} id app唯一标示
    * @apiSuccess {String} secret 认证秘钥
    *
    */
@@ -55,7 +55,7 @@ module.exports = function (router) {
    *
    *
    */
-  router.post('/server-api/app', update);
+  router.post('/server-api/app', serverUpdate);
 }
 
 //********************************************************* */
@@ -70,7 +70,7 @@ async function platformSave(ctx, next) {
   }
 }
 
-async function update(ctx, next) {
+async function serverUpdate(ctx, next) {
   ctx.request.body.id = ctx.get('AppKey');
   await appServer.updateApp(ctx.request.body);
   ctx.body = {};

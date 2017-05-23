@@ -14,7 +14,7 @@ module.exports = function (router) {
    * @apiParam {String} [avator] 会话头像
    * @apiParam {Number} [joinStrategy] 加入策略 1:自由加入 2:需要审核 3拒绝加入
    * @apiParam {Number} [inviteStrategy] 邀请策略 1:会话中的任何人都可以邀请他人加入 2:只有管理员才可以邀请他人加入
-   * @apiParam {[Object]} members 邀请列表 [{type: String,id: String}] type => U:用户 S:会话
+   * @apiParam {[Object]} members 邀请列表 [{type: String,id: String}] type => U:用户 (id:用户refKey字段) S:会话 (id:会话ID)
    *
    * @apiSuccess {String} id 会话ID
    *
@@ -26,10 +26,8 @@ module.exports = function (router) {
    * @apiName invite
    * @apiGroup session
    *
-   * @apiParam {String} id 会话ID
+   * @apiParam {String} sessionId 会话ID
    * @apiParam {[Object]} members 邀请列表 [{type: String,id: String}] type => U:用户 S:会话
-   *
-   * @apiSuccess {String} id 会话ID
    *
    */
   router.post('/api/invite', invite);
@@ -44,15 +42,16 @@ async function saveSession(ctx, next) {
   if (id) {
 
   } else {
-    ctx.request.body.founder = ctx.session.user.id;
-    let newSession = await sessionService.create(ctx.request.body);
-    ctx.body = { id: newSession.id };
+    ctx.request.body.founder = ctx.session.user.refKey;
+    ctx.request.body.appId = ctx.session.user.appId;
+    ctx.body = await sessionService.create(ctx.request.body);
   }
 }
 
 
 async function invite(ctx, next) {
-  ctx.request.body.userId = ctx.session.user.id;
+  ctx.request.body.refKey = ctx.session.user.refKey;
+  ctx.request.body.appId = ctx.session.user.appId;
   await sessionService.invite(ctx.request.body);
   ctx.body = {};
 }

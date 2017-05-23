@@ -24,53 +24,55 @@ exports.invite = inviteFn;
 
 //创建会话
 async function createFn(data) {
-  let pickList = 'type name avator joinStrategy inviteStrategy founder des maxMemberCount mute';
+  let pickList = 'type name avator joinStrategy inviteStrategy founder appId des maxMemberCount mute';
   let oldData = data;
   data = _util.pick(data, pickList);
 
   //基本数据校验
   if (!data.founder) apiError.throw('founder cannot be empty');
   if (!data.name) apiError.throw('name cannot be empty');
+  if (!data.appId) apiError.throw('appId cannot be empty');
   //校验会话创建者
-  let founder = await userService.get(data.founder);
+  let founder = await userService.get(data.founder, data.appId);
   if (!founder) apiError.throw('founder does not exist');
   if (founder.lock == 1) apiError.throw(1011);
   if (founder.del == 1) apiError.throw(1012);
   //校验创建会话是否合规
   let app = await appService.get(founder.appId);
-  let sessionCount = await sessionModel.count({ owner: data.founder });
+  let sessionCount = await sessionModel.count({ owner: data.founder, appId: data.appId });
   if (sessionCount > app.maxSessionCount) apiError.throw('this user:' + data.founder + ' create too much session');
 
   //初始化数据
   data.appId = founder.appId;
-  data.owner = founder.id;
-  data.members = [founder.id];
-  data.admins = [founder.id];
+  data.owner = founder.refKey;
+  data.members = [founder.refKey];
+  data.admins = [founder.refKey];
   data.letterName = letter(data.name)[0];
 
   //存储会话
   let newSession = await sessionModel.create(data);
 
   //创建用户会话关联信息
-  await updateSessionInfo(founder.appId, newSession.id, [founder.id]);
+  await updateSessionInfo(founder.appId, newSession.id, [founder.refKey]);
 
   //处理邀请加入操作
   if (oldData.members && oldData.members.length > 0) {
     await _invite(app, newSession, oldData.members, founder);
   }
 
-  return newSession;
+  return newSession.obj;
 }
 
 async function inviteFn(data) {
-  data = _util.pick(data, ' userId members id');
+  data = _util.pick(data, ' refKey members sessionId appId');
   //基本数据校验
-  if (!data.userId) apiError.throw('userId cannot be empty');
+  if (!data.refKey) apiError.throw('refKey cannot be empty');
+  if (!data.sessionId) apiError.throw('sessionId cannot be empty');
+  if (!data.appId) apiError.throw('appId cannot be empty');
   if (!Array.isArray(data.members) || data.members.length < 1) apiError.throw('members cannot be empty');
-  if (!data.id) apiError.throw('session id cannot be empty');
 
   //校验当前用户信息
-  let user = await userService.get(data.userId);
+  let user = await userService.get(data.refKey, data.appId);
   if (!user) apiError.throw('this user does not exist');
   if (user.lock == 1) apiError.throw(1011);
   if (user.del == 1) apiError.throw(1012);
@@ -78,15 +80,15 @@ async function inviteFn(data) {
   //校验会话和邀请是否合规
   let app = await appService.get(user.appId);
   let session = await sessionModel.findOne({
-    _id: data.id,
-    appId: user.appId,
-    members: data.userId
+    _id: data.sessionId,
+    appId: data.appId,
+    members: data.refKey
   }, 'maxMemberCount inviteStrategy owner admins freeze del lock name');
   if (!session) apiError.throw('session does not exist or user not in session');
   if (session.lock == 1) apiError.throw(1020);
   if (session.del == 1) apiError.throw(1021);
   if (session.freeze == 1) apiError.throw(1022);
-  if (session.inviteStrategy != 1 && data.userId != session.owner && !session.admins.include(data.userId)) {
+  if (session.inviteStrategy != 1 && data.refKey != session.owner && !session.admins.include(data.refKey)) {
     apiError.throw(1023);
   }
 
@@ -108,7 +110,7 @@ async function _invite(app, session, members, user) {
   let newMsg = {
     sessionId: session.id,
     appId: app.id,
-    from: user.id,
+    from: user.refKey,
     content: user.nickname + ' 邀请 ' + userNicknames.join('、') + '加入聊天',
     type: 5,
     fromSys: 1
@@ -148,18 +150,18 @@ async function updateSessionInfo(appId, sessionId, members) {
   let userNicknames = [];
   for (let i = 0; i < members.length; i++) {
     let memberId = members[i];
-    let user = await userService.get(memberId);
+    let user = await userService.get(memberId, appId);
     if (!user) apiError.throw('member id:' + memberId + ' does not exist');
     if (user.appId != appId) apiError.throw('user:' + memberId + ' appId:' + appId + ' does not exist');
     userNicknames.push(user.nickname);
 
     await sessionInfoModel.update({
       sessionId: sessionId,
-      userId: memberId,
+      refKey: memberId,
       appId: appId
     }, {
         sessionId: sessionId,
-        userId: memberId,
+        refKey: memberId,
         appId: appId,
         del: 0
       }, { upsert: true });

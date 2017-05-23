@@ -24,39 +24,46 @@ async function createUserFn(data) {
   //基本数据校验
   if (!data.refKey) apiError.throw('refKey cannot be empty');
   if (!data.nickname) apiError.throw('nickname cannot be empty');
-  if (!data.appId) apiError.throw('appId cannot be appId');
+  if (!data.appId) apiError.throw('appId cannot be empty');
   //判断用户唯一
   let userCount = await userModel.count({ refKey: data.refKey, appId: data.appId });
   if (userCount > 0) apiError.throw('user already exists');
   //存储数据
   data.letterNickname = letter(data.nickname)[0];
-  let result = await userModel.create(data);
+  let newUser = await userModel.create(data);
 
-  return result;
+  return newUser.obj;
 }
 
 async function updateUserFn(data) {
-  data = _util.pick(data || {}, 'id appId refKey nickname avator sex del lock blackLList');
+  data = _util.pick(data || {}, ' appId refKey nickname avator sex del lock blackLList');
   //基本数据校验
-  if (!data.id || !data.appId) apiError.throw('id and appId cannot be empty');
+  if (!data.refKey || !data.appId) apiError.throw('refKey and appId cannot be empty');
   //校验用户是否存在
-  let userCount = await userModel.count({ id: data.id, appId: data.appId });
-  if (userCount > 0) apiError.throw('user not exists ');
+  let userCount = await userModel.count({ refKey: data.refKey, appId: data.appId });
+  if (userCount < 1) apiError.throw('user not exists ');
 
   //更新数据到数据库
-  let user = await userModel.findByIdAndUpdate(data.id, data, { 'new': true });
+  if (data.nickname) {
+    data.letterNickname = letter(data.nickname)[0];
+  }
+  let user = await userModel.findOneAndUpdate({
+    refKey: data.refKey,
+    appId: data.appId
+  }, data, { 'new': true });
 
-  await syncUserToRedis(user);
+  await syncUserToRedis(user.obj);
 }
 
 
-async function authFn(uid, appId, expiry) {
-  if (!uid) apiError.throw(1007);
+async function authFn(refKey, appId, expiry) {
+  if (!refKey) apiError.throw(1007);
+  expiry = +expiry;
   //该出不读缓存，防止缓存数据有误造成不必要的后果
-  let user = await userModel.findById(uid, 'appId sim refKey');
+  let user = await userModel.findOne({ refKey: refKey, appId: appId }, 'appId sim refKey lock del');
   //用户信息校验
   if (!user) {
-    apiError.throw('uid invalid', 401);
+    apiError.throw('refKey invalid', 401);
   } else if (user.appId.toString() !== appId) {
     apiError.throw(1013, 401);
   } else if (user.lock === 1) {
@@ -71,21 +78,18 @@ async function authFn(uid, appId, expiry) {
   expiry = Number.isInteger(expiry) ? (Date.now() + (expiry * 3600000)) : null;
   //生成token
   let token = await _util.random(5);
-  userModel.findByIdAndUpdate(uid, { token: token, expiry: expiry });
-
+  await userModel.findOneAndUpdate({ refKey: refKey, appId: appId }, { token: token, expiry: expiry });
 
   return { token: token };
 }
 
 
-async function getFn(id) {
-  let user = await redisConn.hgetall(config.redis_user_prefix + id);
-  if (!user || !user.id || user.id != id) {
-    user = await userModel.findById(id, '-blackLList -extra');
+async function getFn(refKey, appId) {
+  let user = await redisConn.hgetall(config.redis_user_prefix + appId + '_' + refKey);
+  if (!user || !user.id || user.refKey != refKey) {
+    user = await userModel.findOne({ refKey: refKey, appId: appId }, '-blackLList -extra');
     if (user) {
-      user = user.toObject();
-      user.id = user._id;
-      await syncUserToRedis(user);
+      await syncUserToRedis(user.obj);
     } else {
       return null;
     }
@@ -97,5 +101,5 @@ async function getFn(id) {
 async function syncUserToRedis(user) {
   let pickList = 'id appId sim refKey nickname letterNickname avator sex location del lock';
   user = _util.pick(user, pickList);
-  await redisConn.hmset(config.redis_user_prefix + user.id, user);
+  await redisConn.hmset(config.redis_user_prefix + user.appId + '_' + user.refKey, user);
 }

@@ -30,9 +30,9 @@ async function saveMessage(ctx, next) {
   if (id) {
 
   } else {
-    ctx.request.body.from = ctx.session.user.id;
-    let newMessage = await messageService.sendMessage(ctx.request.body);
-    ctx.body = { id: newMessage.id };
+    ctx.request.body.from = ctx.session.user.refKey;
+    ctx.request.body.appId = ctx.session.user.appId;
+    ctx.body = await messageService.sendMessage(ctx.request.body);
   }
 }
 

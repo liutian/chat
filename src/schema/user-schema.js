@@ -38,7 +38,7 @@ const userSchema = new Schema({
     enum: [0, 1],
     default: 0
   },
-  blackLList: [{ type: Schema.Types.ObjectId, ref: 'user' }],//黑名单只对单聊会话有效
+  blackLList: [{ type: String }],//黑名单只对单聊会话有效,refKey
   updateDate: { type: Date, default: Date.now, required: true },
   createDate: { type: Date, default: Date.now, required: true },
   extra: { type: String }

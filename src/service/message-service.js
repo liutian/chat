@@ -16,14 +16,14 @@ exports.sendMessage = sendMessageFn;
 //************************************************************ */
 
 async function sendMessageFn(data) {
-  data = _util.pick(data, 'from sessionId  content textContent contentType leaveMessage apnsName focusMembers');
+  data = _util.pick(data, 'from appId sessionId  content textContent contentType leaveMessage apnsName focusMembers');
   //基本数据校验
   if (!data.from) apiError.throw('from cannot be empty');
   if (!data.sessionId) apiError.throw('sessionId cannot be empty');
   if (!data.content) apiError.throw('content cannot be empty');
 
   //校验当前用户信息
-  let user = await userService.get(data.from);
+  let user = await userService.get(data.from, data.appId);
   if (!user) apiError.throw('this user does not exist');
   if (user.lock == 1) apiError.throw(1011);
   if (user.del == 1) apiError.throw(1012);
@@ -56,7 +56,7 @@ async function sendMessageFn(data) {
 
   data.id = newSession.msgMaxCount;
   //存储数据
-  await messageModal.create(data);
+  let newMsg = await messageModal.create(data);
 
   //推送消息
   let app = await appService.get(data.appId);
@@ -72,6 +72,6 @@ async function sendMessageFn(data) {
     messageModal.findByIdAndUpdate(data.id, { pushResult: err });
   });
 
-  return data;
+  return newMsg.obj;
 }
 

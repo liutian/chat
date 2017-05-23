@@ -7,7 +7,7 @@ const messageSchema = new Schema({
   sessionId: { type: Schema.Types.ObjectId, required: true },
   appId: { type: Schema.Types.ObjectId, required: true },
   //消息发送方
-  from: { type: Schema.Types.ObjectId, ref: 'user', required: true },
+  from: { type: String, required: true },
   content: { type: String, required: true, trim: true },
   textContent: { type: String },
   pushResult: { type: String },

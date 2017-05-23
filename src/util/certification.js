@@ -17,7 +17,7 @@ exports.server = async function serverCert(ctx, next) {
 
   let timeDiff = Date.now() - timestamp;
   //时间戳不能超过30分钟
-  if (timeDiff > 30 * 60 * 1000) {
+  if (timeDiff > 60 * 60 * 1000) {
     ctx.throw(401, { code: 1002 });
   }
 
@@ -48,27 +48,33 @@ exports.client = async function clientCert(ctx, next) {
   //客户端携带该字段进行接口访问
   //服务器会在没有session或者session失效后提前该字段进行权限校验
   //该字段必须不能为空，给负载均衡提供hash值
-  if (!ctx.get('Token')) {
-    ctx.throw(401, { code: 1009 });
+  let refKey = ctx.get('RefKey');
+  let token = ctx.get('Token');
+  let appId = ctx.get('AppId');
+  if (!refKey || !token || !appId) {
+    ctx.throw(401, { code: 1007 });
   }
 
   if (!ctx.session || !ctx.session.user) {
-    let userId = ctx.get('UserId');
-    let token = ctx.get('Token');
-    let user = await userModel.findOne({ _id: userId, token: token }, 'appId refKey expiry');
+
+    //判断app是否有效
+    let app = await appService.get(appId);
+    if (app.lock == 1) apiError.throw(1018);
+    if (app.del == 1) apiError.throw(1019);
+
+    let user = await userModel.findOne({
+      refKey: refKey,
+      appId: appId,
+      token: token
+    }, 'appId refKey expiry');
     if (!user) {
       ctx.throw(401, { code: 1010 });
     } else if (Date.now() > user.expiry) {
       ctx.throw(401, { code: 1025 });
     }
 
-    ctx.session.user = JSON.parse(user);
+    ctx.session.user = user.obj;
   }
-
-  //判断app是否有效
-  let app = await appService.get(ctx.session.user.appId);
-  if (app.lock == 1) apiError.throw(1018);
-  if (app.del == 1) apiError.throw(1019);
 
 
   await next();
@@ -88,7 +94,7 @@ exports.platform = async function platformCert(ctx, next) {
   }
 
   let timeDiff = Date.now() - timestamp;
-  if (timeDiff > 30 * 60 * 1000) {
+  if (timeDiff > 60 * 60 * 1000) {
     ctx.throw(401, { code: 1002 });
   }
 

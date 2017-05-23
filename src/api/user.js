@@ -6,7 +6,7 @@ const userService = require('../service/user-service');
 module.exports = function (router) {
 
   /**
-     * @api {post} /server-api/user 创建用户
+     * @api {post} /server-api/user/create 创建用户
      * @apiName create User
      * @apiGroup user
      *
@@ -16,7 +16,7 @@ module.exports = function (router) {
      * @apiParam {Number} [sex] 用户性别 1:男 2:女 3:其他
      * @apiParam {[Number]} [location] 用户地理位置
      *
-     * @apiSuccess {String} _id 用户唯一标示，第三方服务器需要保证该结果
+     * @apiSuccess {String} id 用户唯一标示
      *
      */
 
@@ -25,7 +25,7 @@ module.exports = function (router) {
      * @apiName update User
      * @apiGroup user
      *
-     * @apiParam {String} id 用户ID
+     * @apiParam {String} refKey 用户在第三方服务器中的唯一标示一般为用户ID
      * @apiParam {String} [nickname] 用户昵称
      * @apiParam {String} [avator] 用户头像
      * @apiParam {Number} [sex] 用户性别 1:男 2:女 3:其他
@@ -34,14 +34,15 @@ module.exports = function (router) {
      * @apiParam {Number} [lock] 是否锁定
      *
      */
-  router.post('/server-api/user', saveUser);
+  router.post('/server-api/user/create', serverCreateUser);
+  router.post('/server-api/user/update', serverUpdateUser);
 
   /**
      * @api {get} /server-api/user/auth 获取客户端认证Token
      * @apiName get client Token
      * @apiGroup user
      *
-     * @apiParam {String} uid 用户ID
+     * @apiParam {String} refKey 用户在第三方服务器中的唯一标示一般为用户ID
      *
      * @apiSuccess {String} token 客户端请求接口时的认证token
      */
@@ -64,21 +65,20 @@ module.exports = function (router) {
 
 //********************************************************* */
 
-async function saveUser(ctx, next) {
-  let id = ctx.request.body.id;
+async function serverCreateUser(ctx, next) {
   ctx.request.body.appId = ctx.get('AppKey');
-  if (id) {
-    await userService.updateUser(ctx.request.body);
-    ctx.body = {};
-  } else {
-    let result = await userService.createUser(ctx.request.body);
-    ctx.body = result;
-  }
+  ctx.body = await userService.createUser(ctx.request.body);
+}
+
+async function serverUpdateUser(ctx, next) {
+  ctx.request.body.appId = ctx.get('AppKey');
+  await userService.updateUser(ctx.request.body);
+  ctx.body = {};
 }
 
 async function updateUser(ctx, next) {
   let data = ctx.request.body;
-  data.id = ctx.session.user.id;
+  data.refKey = ctx.session.user.refKey;
   data.appId = ctx.session.user.appId;
   delete data.del;
   delete data.lock;
@@ -87,9 +87,8 @@ async function updateUser(ctx, next) {
 }
 
 async function auth(ctx, next) {
-  let uid = ctx.request.query.uid;
+  let refKey = ctx.request.query.refKey;
   let appId = ctx.get('AppKey');
   let expiry = ctx.request.query.expiry;
-  let result = await userService.auth(uid, appId, expiry);
-  ctx.body = result;
+  ctx.body = await userService.auth(refKey, appId, expiry);
 }
