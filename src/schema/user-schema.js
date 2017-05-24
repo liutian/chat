@@ -8,40 +8,38 @@ const userSchema = new Schema({
   },
   sim: {//是否是模拟用户，模拟用户用来发系统消息给普通用户
     type: Number,
-    enum: [0, 1],
+    min: 0,
+    max: 1,
     default: 0
   },
   //第三方服务器用户系统唯一标示，如果是模拟用户对应值为：sim + appId
-  refKey: { type: String, unique: 1, required: true, trim: true },
-  nickname: { type: String, required: true, trim: true },
-  letterNickname: { type: String, required: true, lowercase: true },//取nickname单词的首字母
-  avator: { type: String },
+  refKey: { type: String, required: true, trim: true, maxlength: 50 },
+  nickname: { type: String, required: true, trim: true, maxlength: 50 },
+  letterNickname: { type: String, required: true, lowercase: true, maxlength: 50 },//取nickname单词的首字母
+  avator: { type: String, trim: true, maxlength: 200 },
   sex: {
     type: Number,
-    enum: [
-      1,//男
-      2,//女
-      3//其他
-    ],
+    min: 1,//1男 2女 3其他
+    max: 3,
     default: 1
   },
   location: { type: [Number], index: '2d' },
-  token: { type: String },
-  expiry: { type: Number },
+  token: { type: String, trim: true, maxlength: 100 },
+  tokenExpiry: { type: Date },
   del: {
     type: Number,
-    enum: [0, 1],
+    min: 0,
+    max: 1,
     default: 0
   },
   lock: { //可用来封禁用户
     type: Number,
-    enum: [0, 1],
+    min: 0,
+    max: 1,
     default: 0
   },
   blackLList: [{ type: String }],//黑名单只对单聊会话有效,refKey
-  updateDate: { type: Date, default: Date.now, required: true },
-  createDate: { type: Date, default: Date.now, required: true },
   extra: { type: String }
-});
+}, { timestamps: true });
 
 mongoose.model('user', userSchema);

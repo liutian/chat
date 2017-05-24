@@ -32,7 +32,7 @@ async function createAppFn(data) {
   if (appCount > 0) apiError.throw('app already exists');
 
   //生成数据
-  data.secret = await _util.random();
+  data.secret = await _util.random(10);
   let newApp = await appModel.create(data);
 
   //生成对应的模拟用户
@@ -56,10 +56,14 @@ async function updateAppFn(data) {
   if (!data.id) apiError.throw('id cannot be empty');
 
   //更新数据库
-  await appModel.findByIdAndUpdate(data.id, data);
+  let app = await appModel.findByIdAndUpdate(data.id, data, { runValidators: true, new: true });
+
+  if (!app) apiError.throw('app cannot find');
 
   //同步缓存
-  await syncAppToRedis(data);
+  await syncAppToRedis(app);
+
+  return app.obj;
 }
 
 async function syncAppToRedis(app) {

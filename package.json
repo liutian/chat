@@ -25,9 +25,7 @@
     "apidoc": "0.17.6"
   },
   "apidoc": {
-    "template": {
-      "withCompare": true,
-      "withGenerator": true
-    }
+    "title": "微企IM平台接口文档",
+    "url": "http://192.168.0.108:40000"
   }
 }

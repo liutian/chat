@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const config = require('../config');
 const appService = require('../service/app-service');
 const redisConn = require('../util/redis-factory').getInstance(true);
+const apiError = require('./api-error');
 
 //第三方服务器接口访问校验
 exports.server = async function serverCert(ctx, next) {
@@ -16,8 +17,8 @@ exports.server = async function serverCert(ctx, next) {
   }
 
   let timeDiff = Date.now() - timestamp;
-  //时间戳不能超过30分钟
-  if (timeDiff > 60 * 60 * 1000) {
+  //时间戳
+  if (timeDiff > config.server_timestamp_expiry * 60 * 60 * 1000) {
     ctx.throw(401, { code: 1002 });
   }
 
@@ -59,6 +60,7 @@ exports.client = async function clientCert(ctx, next) {
 
     //判断app是否有效
     let app = await appService.get(appId);
+    if (!app) apiError.throw('appId invalid');
     if (app.lock == 1) apiError.throw(1018);
     if (app.del == 1) apiError.throw(1019);
 
@@ -66,10 +68,10 @@ exports.client = async function clientCert(ctx, next) {
       refKey: refKey,
       appId: appId,
       token: token
-    }, 'appId refKey expiry');
+    }, 'appId refKey tokenExpiry');
     if (!user) {
       ctx.throw(401, { code: 1010 });
-    } else if (Date.now() > user.expiry) {
+    } else if (user.tokenExpiry && Date.now() > user.tokenExpiry) {
       ctx.throw(401, { code: 1025 });
     }
 
@@ -94,7 +96,7 @@ exports.platform = async function platformCert(ctx, next) {
   }
 
   let timeDiff = Date.now() - timestamp;
-  if (timeDiff > 60 * 60 * 1000) {
+  if (timeDiff > config.server_timestamp_expiry * 60 * 60 * 1000) {
     ctx.throw(401, { code: 1002 });
   }
 

@@ -50,15 +50,19 @@ async function updateUserFn(data) {
   let user = await userModel.findOneAndUpdate({
     refKey: data.refKey,
     appId: data.appId
-  }, data, { 'new': true });
+  }, data, { new: true, runValidators: true });
 
-  await syncUserToRedis(user.obj);
+  let returnObj = user.obj;
+
+  await syncUserToRedis(returnObj);
+
+  return returnObj;
 }
 
 
-async function authFn(refKey, appId, expiry) {
+async function authFn(refKey, appId, tokenExpiry) {
   if (!refKey) apiError.throw(1007);
-  expiry = +expiry;
+  tokenExpiry = +tokenExpiry;
   //该出不读缓存，防止缓存数据有误造成不必要的后果
   let user = await userModel.findOne({ refKey: refKey, appId: appId }, 'appId sim refKey lock del');
   //用户信息校验
@@ -70,15 +74,18 @@ async function authFn(refKey, appId, expiry) {
     apiError.throw(1011, 401);
   } else if (user.del === 1) {
     apiError.throw(1012, 401);
-  } else if (expiry && expiry <= 0) {
-    apiError.throw('expiry must > 0 ');
+  } else if (tokenExpiry && tokenExpiry <= 0) {
+    apiError.throw('tokenExpiry must > 0 ');
   }
 
-  //expiry单位小时
-  expiry = Number.isInteger(expiry) ? (Date.now() + (expiry * 3600000)) : null;
+  //tokenExpiry
+  tokenExpiry = Number.isInteger(tokenExpiry) ? (Date.now() + (tokenExpiry * 3600000)) : null;
   //生成token
   let token = await _util.random(5);
-  await userModel.findOneAndUpdate({ refKey: refKey, appId: appId }, { token: token, expiry: expiry });
+  await userModel.findOneAndUpdate({
+    refKey: refKey,
+    appId: appId
+  }, { token: token, tokenExpiry: tokenExpiry }, { runValidators: true });
 
   return { token: token };
 }

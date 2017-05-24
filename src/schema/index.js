@@ -1,5 +1,6 @@
 const fs = require('fs');
 const mongoose = require('mongoose');
+const util = require('util');
 
 const logger = require('log4js').getLogger('schema-index');
 
@@ -13,14 +14,17 @@ const config = require('../config');
    thing.save(); // `created_at` & `updatedAt` will be included
  */
 mongoose.plugin(function (schema, options) {
-  schema.pre('save', updateDate);
-  schema.pre('update', updateDate);
-  schema.pre('findOneAndUpdate', updateDate);
   schema.virtual('obj').get(function () {
     let obj = this.toObject();
     obj.id = obj._id;
     delete obj._id;
     delete obj.__v;
+    if (util.isDate(this.createdAt)) {
+      obj.createdAt = this.createdAt.toLocaleString();
+    }
+    if (util.isDate(this.updatedAt)) {
+      obj.updatedAt = this.updatedAt.toLocaleString();
+    }
     return obj;
   });
 });
@@ -53,7 +57,3 @@ fs.readdirSync(__dirname).forEach(function (filename) {
   require('./' + filename);
 });
 
-function updateDate(next) {
-  this.updateDate = new Date;
-  next();
-}

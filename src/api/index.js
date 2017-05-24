@@ -74,7 +74,15 @@ function onerror(err) {
     err.expose = true;
     err.status = 400;
 
-    err.message = '{"code": 1015,"msg": "' + (err.message || 'db error') + '"}';
+    if (err.name == 'ValidationError') {
+      let message = '';
+      Object.keys(err.errors).forEach(function (key) {
+        message += err.errors[key].message;
+      });
+      err.message = message;
+    } else {
+      err.message = '{"code": 1015,"msg": "' + (err.message || 'db error') + '"}';
+    }
   }
 
   //如果服务器报错打印错误信息到日志中

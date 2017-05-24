@@ -3,73 +3,55 @@ const Schema = mongoose.Schema;
 
 const messageSchema = new Schema({
   //从0递增+1
-  id: { type: Number, required: true },
+  msgId: { type: Number, required: true, min: 1 },
   sessionId: { type: Schema.Types.ObjectId, required: true },
   appId: { type: Schema.Types.ObjectId, required: true },
   //消息发送方
   from: { type: String, required: true },
-  content: { type: String, required: true, trim: true },
-  textContent: { type: String },
+  content: { type: String, required: true, trim: true, maxlength: 10000 },
+  textContent: { type: String, trim: true, maxlength: 10000 },
   pushResult: { type: String },
   //消息内容类型
-  contentType: {
+  contentType: {// 1纯文本 2图文 3图片 4语音 5文件 6视频 7位置
     type: Number,
-    enum: [
-      1,//纯文本
-      2,//图文
-      3,//图片
-      4,//语音
-      5,//文件
-      6,//视频
-      7//位置
-    ],
+    min: 1,
+    max: 7,
     required: true,
     default: 1
   },
   //消息类型
   type: {
-    type: Number,
-    enum: [
-      1,//正常消息
-      2,//创建会话
-      3,//修改会话名称
-      4,//有人加入群聊
-      5,//邀请加入
-      6,//退出群聊
-      7,//被踢出群聊
-      8,//冻结会话
-      9,//禁言会话
-      10,//锁定会话
-      11,//会话所有人变动
-      12//更新公告
-    ],
+    type: Number,// 1正常消息 2创建会话 3修改会话名称 4有人加入群聊 5邀请加入 6退出群聊 7被踢出群聊 8冻结会话 9禁言会话 10锁定会话 11会话所有人变动 12更新公告
+    min: 1,
+    max: 12,
     required: true,
     default: 1
   },
-  apnsName: { type: String },
+  apnsName: { type: String, trim: true, minlength: 1, maxlength: 50 },
   //是否接收离线消息
   leaveMessage: {
     type: Number,
-    enum: [0, 1],
+    min: 0,
+    max: 1,
     default: 1
   },
   //是否是系统发出的消息
   fromSys: {
     type: Number,
-    enum: [0, 1],
+    min: 0,
+    max: 1,
     default: 0
   },
   //@成员列表,refKey
-  focusMembers: [String],
+  focusMembers: [{ type: String, trim: true, maxlength: 50 }],
   del: {
     type: Number,
-    enum: [0, 1],
+    min: 0,
+    max: 1,
     default: 0
   },
-  updateDate: { type: Date, default: Date.now, required: true },
-  createDate: { type: Date, default: Date.now, required: true },
   extra: { type: String }
-});
+}, { timestamps: true });
 
 mongoose.model('message', messageSchema);
 

@@ -8,27 +8,27 @@ const appSchema = new Schema({
   secret: { type: String, required: true },
   //模拟用户用来和普通用户建立会话进行消息往来
   simUser: { type: Schema.Types.ObjectId, ref: 'user' },
-  name: { type: String, required: true, unique: true, trim: true },
-  des: { type: String },
+  name: { type: String, required: true, unique: true, trim: true, maxlength: 50, minlength: 2 },
+  des: { type: String, trim: true, maxlength: 200 },
   //每个用户拥有的会话最大数(拥有指用户属于会话的超级管理员)
-  maxSessionCount: { type: Number, default: 1000000, required: true },
+  maxSessionCount: { type: Number, default: 1000, required: true, max: 10000 },
   //每个会话拥有的成员最大数
-  maxMemberCount: { type: Number, default: 1000, required: true },
+  maxMemberCount: { type: Number, default: 200, required: true, max: 1000 },
   lock: {//用于封禁整个app
     type: Number,
-    enum: [0, 1],
+    min: 0,
+    max: 1,
     default: 0
   },
   del: {
     type: Number,
-    enum: [0, 1],
+    min: 0,
+    max: 1,
     default: 0
   },
-  pushAuth: { type: String },
-  pushApnsName: { type: String },
-  updateDate: { type: Date, default: Date.now, required: true },
-  createDate: { type: Date, default: Date.now, required: true },
+  pushAuth: { type: String, maxlength: 500 },
+  pushApnsName: { type: String, trim: true, minlength: 1, maxlength: 50 },
   extra: { type: String }//额外扩展字段(建议保存json字符串)
-});
+}, { timestamps: true });
 
 mongoose.model('app', appSchema);
