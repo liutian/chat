@@ -1,5 +1,26 @@
 const mongoose = require('mongoose');
+const util = require('util');
 const Schema = mongoose.Schema;
+
+const _util = require('../util/util');
+const apiError = require('../util/api-error');
+
+function Notice(key, options) {
+  mongoose.SchemaType.call(this, key, options, 'Notice');
+}
+Notice.prototype = Object.create(mongoose.SchemaType.prototype);
+
+Notice.prototype.cast = function (val) {
+  let _val = _util.pick(val, 'id title content createDate');
+  if (_val.titile && !util.isString(_val.titile)) apiError.throw('notice title must be String type');
+  if (!util.isString(_val.content)) apiError.throw('notice content must be String type');
+  if (_val.createDate && !util.isDate(_val.createDate)) apiError.throw('notice title must be Date type');
+  if (!_val.content) apiError.throw('notice content cannot be empty');
+  if (!_val.createDate) _val.createDate = new Date();
+  if (!_val.id) _val.id = _val.createDate.getTime();
+  return _val;
+}
+mongoose.Schema.Types.Notice = Notice;
 
 const sessionSchema = new Schema({
   appId: {
@@ -13,7 +34,13 @@ const sessionSchema = new Schema({
     required: true,
     default: 1
   },
-  private: {
+  category: {//会话类别比如运动，读书，旅游，美食，具体值有第三方服务器维护
+    type: Number,
+    min: 1,
+    max: 10000
+  },
+  hideNickname: { type: Number, min: 0, max: 1, default: 0 },//是否对会话中的成员隐藏昵称，会话所有者和管理员还是可以查看的
+  private: {//是否是私聊会话
     type: Number,
     min: 0,
     max: 1,
@@ -23,7 +50,8 @@ const sessionSchema = new Schema({
   name: { type: String, trim: true, maxlength: 100 },
   letterName: { type: String, lowercase: true, trim: true, maxlength: 100 },
   avator: { type: String, trim: true, maxlength: 200 },
-  joinStrategy: {//会话加入策略 1自由加入 2需要审核 3拒绝加入
+  anonymously: { type: Number, min: 0, max: 1, default: 0 },//是否可以发送匿名消息
+  joinStrategy: {//会话加入策略 1自由加入 2需要审核 3拒绝加入 4需要回答问题 5回答问题并审核
     type: Number,
     min: 1,
     max: 3,
@@ -37,7 +65,7 @@ const sessionSchema = new Schema({
   },
   //会话发起者，不一定代表可以管理该会话，但默认创建会话时同时是会话拥有者，后续可以移交会话所有权
   founder: { type: String, required: true },
-  notice: { type: String, trim: true, maxlength: 500 },//会话公告
+  notice: [Notice],//会话公告
   des: { type: String, trim: true, maxlength: 500 },//会话描述
   sumMemberCount: { type: Number },//成员加入总次数
   maxMemberCount: { type: Number, max: 1000 },//限制会话中成员数

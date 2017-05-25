@@ -42,6 +42,31 @@ module.exports = function (router) {
    * @apiSuccess {String} updateDate 会话信息最后一次更新的时间
    * @apiSuccess {String} createDate 会话创建时间
    */
+
+  /**
+   * @api {post} /api/session 更新信息会话[客户端]
+   * @apiName update-session
+   * @apiGroup session
+   *
+   * @apiUse client_auth
+   *
+   *
+   * @apiParam {String} sessionId 会话ID
+   * @apiParam {String} [name] 会话名称
+   * @apiParam {String} [des] 会话描述
+   * @apiParam {String} [avator] 会话头像
+   * @apiParam {Number} [maxMemberCount] 会话最大成员数
+   * @apiParam {Number} [freeze] 是否冻结会话
+   * @apiParam {Number} [mute] 是否禁言 1是 0 否
+   * @apiParam {Number} [joinStrategy] 加入策略
+   * @apiParam {Number} [inviteStrategy] 邀请策略
+   * @apiParam {Number} [lock] 是否锁定会话(只有会话所有者可以更改)
+   * @apiParam {Number} [del] 是否删除会话(只有会话所有者可以更改)
+   * @apiParam {String} [owner] 会话所有者(只有会话所有者可以更改)
+   * @apiParam {[String]} [admins] 会话管理员(只有会话所有者可以更改)
+   * @apiParam {Number} [createMessage] 是否根据修改字段生成相应的会话消息，作为记录
+   *
+   */
   router.post('/api/session', saveSession);
 
   /**
@@ -88,6 +113,25 @@ module.exports = function (router) {
    */
   router.get('/api/session/:id', getSession);
 
+
+
+  /**
+  * @api {post} /api/session-info 更新和用户自己相关的会话信息[客户端]
+  * @apiName update-session-info
+  * @apiGroup session
+  *
+  * @apiUse client_auth
+  *
+  *
+  * @apiParam {String} sessionId 会话ID
+  * @apiParam {String} [nickName] 在会话中的昵称
+  * @apiParam {String} [background] 会话背景图
+  * @apiParam {String} [stick] 会话置顶
+  * @apiParam {String} [quiet] 会话推送免打扰
+  * @apiParam {Number} [clearDate] 从历史会话中清除
+  *
+  */
+  router.post('/api/session-info', saveSessionInfo);
 }
 
 
@@ -107,16 +151,17 @@ async function findSession(ctx, next) {
 }
 
 async function saveSession(ctx, next) {
-  let id = ctx.request.body.id;
-  if (id) {
-
+  if (ctx.request.body.sessionId) {
+    ctx.request.body.refKey = ctx.session.user.refKey;
+    ctx.request.body.appId = ctx.session.user.appId;
+    await sessionService.update(ctx.request.body);
+    ctx.body = {};
   } else {
     ctx.request.body.founder = ctx.session.user.refKey;
     ctx.request.body.appId = ctx.session.user.appId;
     ctx.body = await sessionService.create(ctx.request.body);
   }
 }
-
 
 async function invite(ctx, next) {
   ctx.request.body.refKey = ctx.session.user.refKey;
@@ -125,3 +170,9 @@ async function invite(ctx, next) {
   ctx.body = {};
 }
 
+async function saveSessionInfo(ctx, next) {
+  ctx.request.body.refKey = ctx.session.user.refKey;
+  ctx.request.body.appId = ctx.session.user.appId;
+  await sessionService.updateSessionInfo(ctx.request.body);
+  ctx.body = {};
+}

@@ -25,7 +25,51 @@ exports.list = listFn;
 //查询单个会话的详细信息
 exports.detail = detailFn;
 
+//更新会话信息
+exports.update = updateFn;
+
+//更新用户自己相关的会话信息
+exports.updateSessionInfo = updateSessionInfoFn;
+
 //************************************************************ */
+
+async function updateSessionInfoFn(data) {
+  let oldData = data;
+  //基本数据校验
+  if (!data.refKey) apiError.throw('refKey cannot be empty');
+  if (!data.appId) apiError.throw('appId cannot be empty');
+  if (!data.sessionId) apiError.throw('sessionId cannot be empty');
+  data = _util.pick(data, 'nickName background stick quiet clearDate ');
+  if (data.clearDate == 1) data.clearDate = new Date();
+
+  let sesionInfo = await sessionInfoModel.findOneAndUpdate({
+    sessionId: oldData.sessionId,
+    appId: oldData.appId
+  }, data);
+  if (!sesionInfo) apiError.throw('sessionInfo cannot find');
+
+  //后续操作 nickName
+}
+
+async function updateFn(data) {
+  let oldData = data;
+  //基本数据校验
+  if (!data.refKey) apiError.throw('refKey cannot be empty');
+  if (!data.appId) apiError.throw('appId cannot be empty');
+  if (!data.sessionId) apiError.throw('sessionId cannot be empty');
+  data = _util.pick(data, 'name avator joinStrategy inviteStrategy des maxMemberCount owner admins freeze mute lock del');
+
+  let session = await sessionModel.findOne({
+    appId: oldData.appId,
+    id: oldData.sessionId
+  }, 'admins owner');
+  if (!session) apiError.throw('session cannot find');
+  if (!session.admins.include(data.refKey)) apiError.throw('you are not admin');
+  if ((data.owner || data.admins || data.del == 1 || data.lock == 1) && data.owner != oldData.refKey) apiError.throw('you are not owner');
+
+  data.updateDate = new Date();
+  await sessionModel.findByIdAndUpdate(session.id, data);
+}
 
 async function detailFn(data) {
   //基本数据校验
@@ -41,7 +85,7 @@ async function detailFn(data) {
     appId: data.appId
   }, 'nickName background stick quiet leave');
   if (!sessionInfo) apiError.throw('sessionInfo cannot find');
-  let filter = data.showMembers && sessionInfo.leave != 1 ? '' : '-admins -members -notice';
+  let filter = data.showMembers && sessionInfo.leave != 1 ? '' : '-admins -members';
   let session = await sessionModel.findOne({
     _id: data.sessionId,
     appId: data.appId

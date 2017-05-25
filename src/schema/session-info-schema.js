@@ -7,8 +7,13 @@ const sessionInfoSchema = new Schema({
   appId: { type: Schema.Types.ObjectId, required: true },
   startMsgId: Number,//会话进行查询时开始边界
   endMsgId: Number,//会话进行查询时的结束边界
-  nickName: { type: String, trim: true, maxlength: 50 },//在该会话中的昵称
+  nickName: { type: String, trim: true, maxlength: 50 },//在该会话中的昵称（只有在会话消息列表，会话成员列表会显示该字段）
   background: { type: String, trim: true, maxlength: 200 },//该会话的背景图
+  joinDate: { type: Date },//加入会话的时间
+  speakDate: { type: Date },//最后一次发消息，已用户身份生成的消息不作为真正的发消息
+  remark: { type: String },//私聊时用户可以备注对方
+  joinQuestion: { type: String },//加入会话时需要回答的问题
+  joinAnswer: { type: String },//加入会话时需要回答的问题的答案
   stick: { //置顶
     type: Number,
     min: 0,
