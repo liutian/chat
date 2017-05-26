@@ -38,7 +38,7 @@ const userSchema = new Schema({
     max: 1,
     default: 0
   },
-  remark: { type: String, maxlength: 200 },//用户备注
+  des: { type: String, maxlength: 200 },//用户描述
   blackLList: [{ type: String }],//黑名单只对单聊会话有效,refKey
   extra: { type: String }
 }, { timestamps: true });

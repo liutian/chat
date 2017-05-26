@@ -27,7 +27,9 @@ exports.codeMap = {
   code_1022: '会话已冻结',
   code_1023: '无权操作该会话',
   code_1024: '无权发消息',
-  code_1025: '客户端认证 Token有效期已过'
+  code_1025: '客户端认证 Token有效期已过',
+  code_1026: 'app已锁定',
+  code_1027: 'app已删除'
 }
 
 exports.throw = function throwFn(msg, status) {

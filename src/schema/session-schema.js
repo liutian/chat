@@ -5,22 +5,22 @@ const Schema = mongoose.Schema;
 const _util = require('../util/util');
 const apiError = require('../util/api-error');
 
-function Notice(key, options) {
-  mongoose.SchemaType.call(this, key, options, 'Notice');
-}
-Notice.prototype = Object.create(mongoose.SchemaType.prototype);
+// function Notice(key, options) {
+//   mongoose.SchemaType.call(this, key, options, 'Notice');
+// }
+// Notice.prototype = Object.create(mongoose.SchemaType.prototype);
 
-Notice.prototype.cast = function (val) {
-  let _val = _util.pick(val, 'id title content createDate');
-  if (_val.titile && !util.isString(_val.titile)) apiError.throw('notice title must be String type');
-  if (!util.isString(_val.content)) apiError.throw('notice content must be String type');
-  if (_val.createDate && !util.isDate(_val.createDate)) apiError.throw('notice title must be Date type');
-  if (!_val.content) apiError.throw('notice content cannot be empty');
-  if (!_val.createDate) _val.createDate = new Date();
-  if (!_val.id) _val.id = _val.createDate.getTime();
-  return _val;
-}
-mongoose.Schema.Types.Notice = Notice;
+// Notice.prototype.cast = function (val) {
+//   let _val = _util.pick(val, 'id title content createDate');
+//   if (_val.titile && !util.isString(_val.titile)) apiError.throw('notice title must be String type');
+//   if (!util.isString(_val.content)) apiError.throw('notice content must be String type');
+//   if (_val.createDate && !util.isDate(_val.createDate)) apiError.throw('notice title must be Date type');
+//   if (!_val.content) apiError.throw('notice content cannot be empty');
+//   if (!_val.createDate) _val.createDate = new Date();
+//   if (!_val.id) _val.id = _val.createDate.getTime();
+//   return _val;
+// }
+// mongoose.Schema.Types.Notice = Notice;
 
 const sessionSchema = new Schema({
   appId: {
@@ -46,6 +46,7 @@ const sessionSchema = new Schema({
     max: 1,
     default: 1
   },
+  privateKey: { type: String },//保存私聊会话成员的refKey，降序排列已 '-' 分割
   //群聊时需要,私聊会话为对方名称
   name: { type: String, trim: true, maxlength: 100 },
   letterName: { type: String, lowercase: true, trim: true, maxlength: 100 },
@@ -65,15 +66,15 @@ const sessionSchema = new Schema({
   },
   //会话发起者，不一定代表可以管理该会话，但默认创建会话时同时是会话拥有者，后续可以移交会话所有权
   founder: { type: String, required: true },
-  notice: [Notice],//会话公告
+  // notice: [Notice],//会话公告
   des: { type: String, trim: true, maxlength: 500 },//会话描述
-  sumMemberCount: { type: Number },//成员加入总次数
-  maxMemberCount: { type: Number, max: 1000 },//限制会话中成员数
+  maxMemberCount: { type: Number, min: 1, max: 1000 },//限制会话中成员数
   msgMaxCount: { type: Number, required: true, default: 0 },//会话中的总消息数
   latestMessage: Schema.Types.Mixed,//会话中最新的消息
   owner: { type: String, required: true },//会话所有者
   admins: [{ type: String }],
-  members: [{ type: String }],//会话中的成员，包括管理员和拥有者
+  joinQuestion: { type: String },//加入会话时需要回答的问题
+  joinAnswer: { type: String },//加入会话时需要回答的问题的答案
   freeze: {//禁止成员变动(不包括主动退出群)只有会话所有者才能操作
     type: Number,
     min: 0,
@@ -99,7 +100,7 @@ const sessionSchema = new Schema({
     default: 0
   },
   blackList: [{ type: String }],//黑名单
-  updateDate: { type: Date, default: Date.now, required: true },//更新会话本身时才会更新该字段(成员变动不会更新该字段)
+  updateDate: { type: Date, default: Date.now, required: true },//更新会话本身时才会更新该字段(普通成员变动不会更新该字段)
   extra: { type: String }
 }, { timestamps: true });
 

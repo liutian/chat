@@ -36,7 +36,7 @@ async function createUserFn(data) {
 }
 
 async function updateUserFn(data) {
-  data = _util.pick(data || {}, ' appId refKey nickname avator sex del lock blackLList');
+  data = _util.pick(data || {}, ' appId refKey nickname avator sex del lock blackLList des');
   //基本数据校验
   if (!data.refKey || !data.appId) apiError.throw('refKey and appId cannot be empty');
   //校验用户是否存在

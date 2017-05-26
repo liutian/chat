@@ -27,9 +27,9 @@ exports.server = async function serverCert(ctx, next) {
   let app = await appService.get(appKey);
   if (!app) {
     ctx.throw(401, { code: 1003 });
-  } else if (+app.lock === 1) {
+  } else if (app.lock == 1) {
     ctx.throw(401, { code: 1004 });
-  } else if (+app.del === 1) {
+  } else if (app.del == 1) {
     ctx.throw(401, { code: 1005 });
   }
 
@@ -73,6 +73,10 @@ exports.client = async function clientCert(ctx, next) {
       ctx.throw(401, { code: 1010 });
     } else if (user.tokenExpiry && Date.now() > user.tokenExpiry) {
       ctx.throw(401, { code: 1025 });
+    } else if (user.lock == 1) {
+      ctx.throw(401, { code: 1011 });
+    } else if (user.del == 1) {
+      ctx.throw(401, { code: 1012 });
     }
 
     ctx.session.user = user.obj;

@@ -17,6 +17,7 @@ module.exports = function (router) {
    * @apiParam {String} [avator] 用户头像
    * @apiParam {Number} [sex] 用户性别 1:男 2:女 3:其他
    * @apiParam {[Number]} [location] 用户地理位置
+   * @apiParam {String} [des] 用户自己描述
    *
    * @apiSuccess {String} id 用户唯一标示
    *
@@ -35,6 +36,7 @@ module.exports = function (router) {
    * @apiParam {String} [avator] 用户头像
    * @apiParam {Number} [sex] 用户性别 1:男 2:女 3:其他
    * @apiParam {[Number]} [location] 用户地理位置
+   * @apiParam {String} [des] 用户自己描述
    * @apiParam {Number} [del] 是否删除
    * @apiParam {Number} [lock] 是否锁定
    *
@@ -66,6 +68,7 @@ module.exports = function (router) {
    * @apiParam {String} [avator] 用户头像
    * @apiParam {Number} [sex] 用户性别 1:男 2:女 3:其他
    * @apiParam {[Number]} [location] 用户地理位置
+   * @apiParam {String} [des] 用户自己描述
    *
    */
   router.post('/api/user', updateUser);
