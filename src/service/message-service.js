@@ -70,6 +70,10 @@ async function listFn(data) {
     query.contentType = data.contentType;
   }
 
+  if (!util.isNumber(query.msgId.$gte)) delete query.msgId.$gte;
+  if (!util.isNumber(query.msgId.$lte)) delete query.msgId.$lte;
+  if (!util.isNumber(query.msgId.$gt)) delete query.msgId.$gt;
+  if (!util.isNumber(query.msgId.$lt)) delete query.msgId.$lt;
   let messageList = await messageModal.find(query).sort('-msgId').skip(skip).limit(limit);
 
   //实时查询消息中发送者信息

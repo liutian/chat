@@ -6,6 +6,7 @@ const userSchema = new Schema({
     type: Schema.Types.ObjectId,
     required: true
   },
+  sysSessionId: { type: Schema.Types.ObjectId },
   sim: {//是否是模拟用户，模拟用户用来发系统消息给普通用户
     type: Number,
     min: 0,
@@ -26,6 +27,7 @@ const userSchema = new Schema({
   location: { type: [Number], index: '2d' },
   token: { type: String, trim: true, maxlength: 100 },
   tokenExpiry: { type: Date },
+  joinSessionAgree: { type: Number, min: 0, max: 1, default: 0 },//被邀请加入会话是否需要同意
   del: {
     type: Number,
     min: 0,

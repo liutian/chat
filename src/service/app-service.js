@@ -6,6 +6,7 @@ const config = require('../config');
 const apiError = require('../util/api-error');
 const userService = require('./user-service');
 const _util = require('../util/util');
+const letter = require('../util/letter');
 
 
 const appModel = mongoose.model('app');
@@ -36,14 +37,17 @@ async function createAppFn(data) {
   let newApp = await appModel.create(data);
 
   //生成对应的模拟用户
-  let newUserData = {
+  let newSimUserData = {
     appId: newApp.id,
     sim: 1,
-    refKey: 'sim-user-' + newApp.id,
+    refKey: 'simuser_' + (await _util.random(5)),
     nickname: '模拟用户'
   }
-  let newUser = await userService.createUser(newUserData);
-  newApp.simUser = newUser.id;
+  newSimUserData.letterNickname = letter(newSimUserData.nickname)[0];
+  await userModel.create(newSimUserData);
+
+  //更新app的simUser
+  newApp.simUser = newSimUserData.refKey;
   await newApp.save();
 
   return newApp.obj;
@@ -61,17 +65,12 @@ async function updateAppFn(data) {
   if (!app) apiError.throw('app cannot find');
 
   //同步缓存
-  await syncAppToRedis(app);
+  await syncAppToRedis(app.obj);
 
   return app.obj;
 }
 
 async function syncAppToRedis(app) {
-  let pickList = 'id secret simUser name des maxSessionCount maxMemberCount lock del pushAuth pushApnsName';
-  app = _util.pick(app, pickList);
-  if (app.simUser && app.simUser.id) {
-    app.simUser = app.simUser.id;
-  }
   await redisConn.hmset(config.redis_app_prefix + app.id, app);
 }
 

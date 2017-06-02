@@ -7,14 +7,19 @@ const util = require('../util/util');
 const apiError = require('../util/api-error');
 const letter = require('../util/letter');
 const _util = require('../util/util');
+const appService = require('./app-service');
+const sessionService = require('./session-service');
 
 const userModel = mongoose.model('user');
-
+const sessionModel = mongoose.model('session');
+const sessionInfoModel = mongoose.model('sessionInfo');
 
 exports.createUser = createUserFn;
 exports.updateUser = updateUserFn;
 exports.auth = authFn;
 exports.get = getFn;
+exports.list = listFn;
+exports.createSysSession = createSysSessionFn;
 
 
 /*---------------------------------------- 分割线 ------------------------------------------------*/
@@ -25,14 +30,63 @@ async function createUserFn(data) {
   if (!data.refKey) apiError.throw('refKey cannot be empty');
   if (!data.nickname) apiError.throw('nickname cannot be empty');
   if (!data.appId) apiError.throw('appId cannot be empty');
+
+  let app = await appService.get(data.appId);
+
   //判断用户唯一
   let userCount = await userModel.count({ refKey: data.refKey, appId: data.appId });
   if (userCount > 0) apiError.throw('user already exists');
   //存储数据
   data.letterNickname = letter(data.nickname)[0];
   let newUser = await userModel.create(data);
+  //生成系统会话
+  let newSysSession = await createSysSessionFn(data.appId, data.refKey, app.simUser);
 
   return newUser.obj;
+}
+
+async function createSysSessionFn(appId, refKey, simUser) {
+  let privateKey = sessionService.createPrivateKey(refKey, simUser);
+
+  //初始化数据
+  let sysSession = {
+    appId: appId,
+    type: 2,
+    name: '系统会话',
+    publicSearch: 0,
+    private: 1,
+    privateKey: privateKey,
+    owner: simUser,
+    founder: simUser,
+    admins: [simUser],
+    memberCount: 2
+  };
+  sysSession.letterName = letter(sysSession.name)[0];
+
+  //存储会话
+  let newSession = await sessionModel.create(sysSession);
+  //存储会话关联信息
+  let sessionInfo = {
+    sessionId: newSession.id,
+    refKey: refKey,
+    appId: appId,
+    del: 0,
+    joinDate: new Date(),
+    clearDate: null,
+    stick: 0,
+    outside: 0
+  }
+
+  await sessionInfoModel.create(sessionInfo);
+  sessionInfo.refKey = simUser;
+  await sessionInfoModel.create(sessionInfo);
+
+  await userModel.findOneAndUpdate({
+    appId: appId,
+    refKey: refKey
+  }, { sysSessionId: newSession.id });
+
+  return newSession.obj;
 }
 
 async function updateUserFn(data) {
@@ -106,7 +160,20 @@ async function getFn(refKey, appId) {
 }
 
 async function syncUserToRedis(user) {
-  let pickList = 'id appId sim refKey nickname letterNickname avator sex location del lock';
-  user = _util.pick(user, pickList);
   await redisConn.hmset(config.redis_user_prefix + user.appId + '_' + user.refKey, user);
+}
+
+
+async function listFn(data) {
+  let oldData = data;
+  data = _util.pick(data, 'nickname sex del lock appId');
+  if (!data.appId) apiError.throw('appId cannot be empty');
+
+  let limit = oldData.pageSize || 10;
+  let skip = ((oldData.page || 1) - 1) * limit;
+  if (data.nickname) data.nickname = new RegExp(data.nickname, 'i');
+  data.sim = 0;
+  let userList = await userModel.find(data).limit(limit).skip(skip);
+
+  return userList.map(v => v.obj);
 }

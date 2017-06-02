@@ -11,23 +11,22 @@ exports.random = randomFn;
 function pickFn(data, schema, extraKeys) {
   let newData = {};
   if (util.isString(schema)) {
-    for (var key in data) {
-      if (schema.includes(key)) {
+    extraKeys = schema;
+    schema = null;
+    Object.keys(data).forEach(function (key) {
+      if (extraKeys.includes('**') || extraKeys.includes(key)) {
         newData[key] = data[key];
-        if (util.isString(newData[key])) {
-          newData[key] = newData[key].trim();
-        }
       }
-    }
+      if (extraKeys.includes('-' + key)) {
+        delete newData[key];
+      }
+    })
   } else if (util.isObject(schema)) {
-    for (var key in data) {
+    Object.keys(data).forEach(function (key) {
       if (key in schema || (extraKeys && extraKeys.includes(key) && !extraKeys.includes('-' + key))) {
         newData[key] = data[key];
-        if (util.isString(newData[key])) {
-          newData[key] = newData[key].trim();
-        }
       }
-    }
+    })
   }
 
   return newData;

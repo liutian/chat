@@ -29,7 +29,10 @@ exports.codeMap = {
   code_1024: '无权发消息',
   code_1025: '客户端认证 Token有效期已过',
   code_1026: 'app已锁定',
-  code_1027: 'app已删除'
+  code_1027: 'app已删除',
+  code_1028: '会话已设置拒绝加入',
+  code_1029: '加入会话问题答案错误',
+  code_1030: '一次邀请成员数不能超过100'
 }
 
 exports.throw = function throwFn(msg, status) {

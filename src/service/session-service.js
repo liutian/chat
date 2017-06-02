@@ -8,7 +8,7 @@ const apiError = require('../util/api-error');
 const _util = require('../util/util');
 const appService = require('./app-service');
 const messageService = require('./message-service');
-const userService = require('../service/user-service');
+const userService = require('./user-service');
 const letter = require('../util/letter');
 const pushService = require('./push-service');
 
@@ -16,11 +16,14 @@ const pushService = require('./push-service');
 //创建会话,members字段可以为空
 exports.create = createFn;
 
-//邀请他人加入会话
-exports.invite = inviteFn;
+//进入会话
+exports.enter = enterFn;
+
+//退出会话或从会话中踢出
+exports.exit = exitFn;
 
 //查询用户自己的会话列表
-exports.list = listFn;
+exports.listHistory = listHistoryFn;
 
 //查询单个会话的详细信息
 exports.detail = detailFn;
@@ -31,7 +34,124 @@ exports.update = updateFn;
 //更新用户自己相关的会话信息
 exports.updateSessionInfo = updateSessionInfoFn;
 
+//查询app下所有会话
+exports.list = listFn;
+
+exports.createPrivateKey = createPrivateKeyFn;
+
 //************************************************************ */
+
+async function exitFn(data) {
+  data = _util.pick(data, ' refKey appId members sessionId ');
+  //基本数据校验
+  if (!data.refKey) apiError.throw('refKey cannot be empty');
+  if (!data.appId) apiError.throw('appId cannot be empty');
+
+  //校验当前用户信息
+  let user = await userService.get(data.refKey, data.appId);
+  if (!user) apiError.throw('this user does not exist');
+  if (user.lock == 1) apiError.throw(1011);
+  if (user.del == 1) apiError.throw(1012);
+  //校验app***************可选操作
+  let app = await appService.get(data.appId);
+  if (!app) apiError.throw('app does not exist');
+  if (app.lock == 1) apiError.throw(1026);
+  if (app.del == 1) apiError.throw(1027);
+
+  let sessionInfo = await sessionInfoModel.find({
+    appId: data.appId,
+    sessionId: data.sessionId,
+    refKey: data.refKey,
+    outside: 0
+  });
+  if (!sessionInfo) apiError.throw('you are not session member');
+  let session = await sessionModel.findById(data.sessionId);
+  if (!session) apiError.throw('session cannot find');
+  if (session.lock == 1) apiError.throw(1020)
+
+  if (!data.members || data.members.length <= 0) {
+    if (data.refKey == session.owner) apiError.throw('you are owner cannot exit session');
+    await _exit([data.refKey], session, app, user);
+  } else if (!session.admins.includes(data.refKey) || session.owner != data.refKey) {
+    //只有管理员才可以踢出他人
+    apiError.throw('you are not session admin or owner');
+  } else {
+    await _exit(data.members, session, app, user);
+  }
+}
+
+async function _exit(members, session, app, user) {
+  members.forEach(function (m) {
+    if (session.admins.includes(m) || session.owner == m) {
+      apiError.throw('admin cannot be kicked out');
+    }
+  });
+
+  await sessionInfoModel.update({
+    appId: app.id,
+    sessionId: session.id,
+    refKey: { $in: members },
+    outside: 0
+  }, { outside: 1, endMsgId: session.msgMaxCount }, { multi: true, runValidators: true });
+
+  let memberCount = await sessionInfoModel.count({
+    appId: app.id,
+    sessionId: session.id,
+    outside: 0
+  });
+
+  let private = 0;
+  let privateKey = null;
+  if (memberCount == 2) {
+    private = 1;
+    let sessionInfoList = await sessionInfoModel.find({
+      appId: app.id,
+      sessionId: session.id,
+      outside: 0
+    }, 'refKey');
+    privateKey = createPrivateKeyFn(sessionInfoList[0].refKey, sessionInfoList[1].refKey);
+  }
+
+  await sessionModel.findByIdAndUpdate(session.id, {
+    private: private,
+    privateKey: privateKey,
+    memberCount: memberCount
+  });
+
+  let userList = await userModel.find({
+    refKey: { $in: members },
+    appId: app.id
+  }, 'nickname');
+  let nicknameStr = userList.map(v => v.nickname).join('、');
+  let msgType = 7;
+  if (members.length > 1) {
+    nicknameStr += ' 被踢出会话';
+  } else {
+    msgType = 6;
+    nicknameStr += ' 退出会话'
+  }
+
+  //初始化新消息
+  let message = {
+    sessionId: session.id,
+    appId: app.id,
+    from: user.refKey,
+    content: nicknameStr,
+    type: msgType,
+    fromSys: 1,
+    apnsName: app.apnsName,
+    leaveMessage: 1,
+    createdAt: new Date()
+  }
+  //生成系统消息
+  let newMessage = await messageService.storeMessage(message, {
+    room: session.id,
+    pushData: message,
+    pushAuth: app.pushAuth,
+    apnsName: app.apnsName,
+    leaveMessage: 1
+  });
+}
 
 async function updateSessionInfoFn(data) {
   let oldData = data;
@@ -39,7 +159,7 @@ async function updateSessionInfoFn(data) {
   if (!data.refKey) apiError.throw('refKey cannot be empty');
   if (!data.appId) apiError.throw('appId cannot be empty');
   if (!data.sessionId) apiError.throw('sessionId cannot be empty');
-  data = _util.pick(data, 'nickName background stick quiet');
+  data = _util.pick(data, 'nickname background stick quiet');
 
   if (oldData.remark) {
     let session = await sessionModel.findById(oldData.sessionId, 'private privateKey');
@@ -58,7 +178,7 @@ async function updateSessionInfoFn(data) {
   }
 
   if (oldData.remove == 1) data.clearDate = new Date();
-  await sessionInfoModel.findByIdAndUpdate({
+  await sessionInfoModel.findOneAndUpdate({
     sessionId: oldData.sessionId,
     appId: oldData.appId,
     refKey: oldData.refKey
@@ -72,11 +192,11 @@ async function updateFn(data) {
   if (!data.refKey) apiError.throw('refKey cannot be empty');
   if (!data.appId) apiError.throw('appId cannot be empty');
   if (!data.sessionId) apiError.throw('sessionId cannot be empty');
-  data = _util.pick(data, ` name des hideNickname avator anonymously
-  joinStrategy inviteStrategy  maxMemberCount owner admins freeze
-  mute lock del joinQuestion joinAnswer`);
+  data = _util.pick(data, ` category hideNickname publicSearch name avator anonymously
+   joinStrategy inviteStrategy des maxMemberCount owner admins noAuditAdmin notice
+   joinQuestion joinAnswer mute del lock`);
 
-  let app = await appService.get(data.appId);
+  let app = await appService.get(oldData.appId);
   if (!app) apiError.throw('app cannot find');
 
   //校验是否合法的会话成员
@@ -88,15 +208,19 @@ async function updateFn(data) {
   });
   if (isMember < 1) apiError.throw('you are not session member');
 
-  let session = await sessionModel.findById(oldData.sessionId, 'admins owner');
+  let session = await sessionModel.findById(oldData.sessionId, 'admins owner appId');
   if (!session) apiError.throw('session cannot find');
   if (session.appId != oldData.appId) apiError.throw(`session cannot find in appId:${oldData.appId}`);
   //校验当前用户是否有管理权限
-  if (session.owner != oldData.refKey && !session.admins.include(oldData.refKey)) apiError.throw('you are not session admin');
+  if (session.owner != oldData.refKey && !session.admins.include(oldData.refKey)) {
+    apiError.throw('you are not session admin');
+  }
 
   //只有会话所有者才可以移交会话所有人，新增/删除管理员，解散/锁定会话
-  if ((data.owner || data.admins || data.del == 1 || data.lock == 1)
-    && data.owner != oldData.refKey) apiError.throw('you are not owner');
+  if ((data.owner || data.admins || data.del == 1 || data.lock == 1
+    || data.noAuditAdmin) && data.owner != oldData.refKey) {
+    apiError.throw('you are not owner');
+  }
 
   data.updateDate = new Date();
   await sessionModel.findByIdAndUpdate(oldData.sessionId, data, { runValidators: true });
@@ -131,7 +255,7 @@ async function detailFn(data) {
     appId: data.appId
   }, 'startMsgId endMsgId nickname background joinDate speakDate stick quiet clearDate outside');
   if (!sessionInfo) apiError.throw('sessionInfo cannot find');
-  let session = await sessionModel.findById(data.sessionId, 'notice[0] -latestMessage');
+  let session = await sessionModel.findById(data.sessionId, '-latestMessage');
   if (!session) apiError.throw('session cannot find');
   let returnSession = Object.assign(session.obj, sessionInfo.obj);
   returnSession.id = session.id;//防止ID被覆盖
@@ -140,7 +264,7 @@ async function detailFn(data) {
 }
 
 //排序没有多大作用,不需要分页
-async function listFn(data) {
+async function listHistoryFn(data) {
   //基本数据校验
   if (!data.refKey) apiError.throw('refKey cannot be empty');
   if (!data.appId) apiError.throw('appId cannot be empty');
@@ -186,7 +310,7 @@ async function listFn(data) {
 
 //创建会话
 async function createFn(data) {
-  let pickList = 'type name avator anonymously joinStrategy inviteStrategy founder appId des maxMemberCount mute freeze category hideNickname';
+  let pickList = '** -members -private -msgMaxCount -latestMessage -owner -admins -del -lock';
   let oldData = data;
   data = _util.pick(data, pickList);
 
@@ -211,7 +335,7 @@ async function createFn(data) {
   //检查如果存在当前用户和members[0]在一个会话，而且该会话只有这两个人则直接返回该会话
   if (privateSession) {
     let otherId = data.members[0].id;
-    let privateKey = data.founder >= otherId ? data.founder + '-' + otherId : otherId + '-' + data.founder;
+    let privateKey = createPrivateKey(otherId, data.founder);
     let _session = await sessionModel.findOne({
       appId: data.appId,
       private: 1,
@@ -237,23 +361,29 @@ async function createFn(data) {
   let newSession = await sessionModel.create(data);
 
   //创建用户会话关联信息
-  await updateSessionInfo(data.appId, newSession, [data.founder]);
+  await updateSessionInfo(data.appId, newSession, [founder], 1);
 
   //处理邀请加入操作
   if (oldData.members && oldData.members.length > 0) {
-    await _invite(app, newSession, oldData.members, founder);
+    await _enter(app, newSession, oldData.members, founder, 1);
   }
 
   return newSession.obj;
 }
 
-async function inviteFn(data) {
-  data = _util.pick(data, ' refKey members sessionId appId backView');
+function createPrivateKeyFn(refKey1, refKey2) {
+  if (refKey1 > refKey2) {
+    return refKey1 + '_' + refKey2;
+  } else {
+    return refKey2 + '_' + refKey1;
+  }
+}
+
+async function enterFn(data) {
+  data = _util.pick(data, ' refKey appId members sessionId backView sysMsgId joinAnswer resolve rejectReason');
   //基本数据校验
   if (!data.refKey) apiError.throw('refKey cannot be empty');
-  if (!data.sessionId) apiError.throw('sessionId cannot be empty');
   if (!data.appId) apiError.throw('appId cannot be empty');
-  if (!Array.isArray(data.members) || data.members.length < 1) apiError.throw('members cannot be empty');
 
   //校验当前用户信息
   let user = await userService.get(data.refKey, data.appId);
@@ -266,33 +396,200 @@ async function inviteFn(data) {
   if (app.lock == 1) apiError.throw(1026);
   if (app.del == 1) apiError.throw(1027);
 
-  //校验会话和邀请是否合规
-  let session = await sessionModel.findOne({
-    _id: data.sessionId,
-    appId: data.appId,
-    members: data.refKey
-  }, 'maxMemberCount inviteStrategy owner admins freeze del lock name msgMaxCount');
-  if (!session) apiError.throw('session does not exist or user not in session');
-  if (session.lock == 1) apiError.throw(1020);
-  if (session.del == 1) apiError.throw(1021);
-  //冻结状态只有所有者才能邀请
-  if (session.freeze == 1 && data.refKey != session.owner) apiError.throw(1022);
-  //inviteStrategy == 2 只有管理员才能邀请
-  if (session.inviteStrategy == 2 && data.refKey != session.owner && !session.admins.include(data.refKey)) {
-    apiError.throw(1023);
+  //有sessionId的情况说明，该操作是用户直接行为，比如用户自己加入会话，或者邀请其他人加入会后
+  if (data.sessionId) {
+    //校验会话和邀请是否合规
+    let session = await sessionModel.findOne({
+      _id: data.sessionId,
+      appId: data.appId
+    }, '-latestMessage -joinQuestion');
+    if (!session) apiError.throw('session cannot find');
+    if (session.lock == 1) apiError.throw(1020);
+    if (session.del == 1) apiError.throw(1021);
+
+    let goOn = await directEnter(data, user, app, session);
+    if (goOn) {
+      await _enter(app, session, data.members, user, data.historyView);
+    }
+  } else if (data.sysMsgId) {//有sysMsgId说明，该操作是用户间接行为，比如用户同意别人邀请自己加入会话，管理员审核同意其他人加入会话
+    let sysMsg = await messageModal.findById(data.sysMsgId);
+    if (!sysMsg) apiError.throw('sysMsg cannot find');
+    if (!sysMsg.content || !util.isString(sysMsg.content)) apiError.throw('sysMsg content cannot be empty');
+    sysMsg.content = JSON.parse(sysMsg.content);
+    if (!sysMsg.content.fromRefKey) apiError.throw('sysMsg content.fromRefKey cannot find');
+    let from = await userService.get(sysMsg.content.fromRefKey, data.appId);
+    if (!from) apiError.throw('sysMsg from cannot find');
+
+    let goOn = await indirectEnter(data, app, from, sysMsg);
+    if (goOn) {
+      await _enter(app, session, data.members, from, data.historyView);
+    }
+  } else {
+    apiError.throw('sessionId and sysMsgId cannot be empty');
   }
 
-  await _invite(app, session, data.members, user, data.backView);
-
-  return session.obj;
 }
 
-//邀请加入会话不验证与现有会话中的成员是否重复，交由数据库去重
+async function indirectEnter(data, app, from, sysMsg) {
+  //该消息必须是来自系统会话中的消息
+  if (sysMsg.fromSys != 1) apiError.throw('sysMsgId not from system');
+
+  if (sysMsg.type != 15 && sysMsg.type != 16 && sysMsg.type != 17) {
+    apiError.throw('sysMsg type illegal');
+  }
+
+  //更新其他管理员这类消息的状态
+  if (sysMsg.type == 16 || sysMsg.type == 17) {
+    await messageModal.update({
+      relevantSessionId: sysMsg.relevantSessionId,
+      relevantToken: sysMsg.relevantToken
+    }, { relevantStatus: data.resolve == 1 ? 2 : 3 }, { multi: true });
+  }
+
+  if (data.resolve == 1) {
+    data.members = [{ type: 'U', id: sysMsg.content.refKey }];
+    return true;
+  }
+
+  //生成拒绝消息
+  let message = {
+    appId: data.appId,
+    from: app.simUser,
+    content: JSON.stringify({ rejectReason: data.rejectReason, fromRefKey: from.refKey }),
+    fromSys: 1,
+    apnsName: app.apnsName,
+    leaveMessage: 1,
+    createdAt: new Date()
+  }
+
+  let user = await userService.get(sysMsg.content.fromRefKey, data.appId);
+  if (!user) apiError.throw(`user cannot find (refKey:${sysMsg.content.fromRefKey})`);
+  message.sessionId = user.sysSessionId;
+  if (sysMsg.type == 15) {
+    message.type = 18;
+    //生成系统消息
+    let newMessage = await messageService.storeMessage(message, {
+      room: user.sysSessionId,
+      pushData: message,
+      pushAuth: app.pushAuth,
+      apnsName: app.apnsName,
+      leaveMessage: 1
+    });
+  } else if (sysMsg.type == 16) {
+    message.type = 19;
+    //生成系统消息
+    let newMessage = await messageService.storeMessage(message, {
+      room: user.sysSessionId,
+      pushData: message,
+      pushAuth: app.pushAuth,
+      apnsName: app.apnsName,
+      leaveMessage: 1
+    });
+  } else if (sysMsg.type == 17) {
+    message.type = 20;
+    //生成系统消息
+    let newMessage = await messageService.storeMessage(message, {
+      room: user.sysSessionId,
+      pushData: message,
+      pushAuth: app.pushAuth,
+      apnsName: app.apnsName,
+      leaveMessage: 1
+    });
+  }
+  return false;
+}
+
+async function directEnter(data, currUser, app, session) {
+  let relevantRandom = await _util.random(5);
+  let message = {
+    appId: data.appId,
+    from: app.simUser,
+    fromSys: 1,
+    apnsName: app.apnsName,
+    leaveMessage: 1,
+    createdAt: new Date(),
+    relevantSessionId: data.sessionId,
+    relevantToken: Date.now() + '' + relevantRandom
+  }
+
+  //邀请他人加入
+  if (Array.isArray(data.members) && data.members.length > 0) {
+    let isAdmin = data.refKey == session.owner || session.admins.includes(data.refKey);
+
+    //只检验普通用户的邀请,管理员邀请不需要校验是否需要审核直接通过
+    if (isAdmin) return true;
+
+    if (data.members.length > 1) {//只有管理权限的人可以一次邀请多个人
+      apiError.throw('you invite more than one at a time');
+    }
+
+    if (session.inviteStrategy == 2 || (session.inviteStrategy == 3 && session.memberCount > 100)) {
+      //生成邀请审核消息
+      let auditAdmin = session.admins.filter(v => !session.noAuditAdmin.includes(v));
+      for (let i = 0; i < auditAdmin.length; i++) {
+        let adminRefKey = auditAdmin[i];
+        let admin = await userService.get(adminRefKey, data.appId);
+        if (!admin) apiError.throw(`session admin (refKey:${adminRefKey}) cannot find`);
+        message.sessionId = admin.sysSessionId;
+        message.type = 16;
+        message.content = JSON.stringify({ refKey: data.members[0], fromRefKey: currUser.refKey });
+        //生成系统消息
+        let newMessage = await messageService.storeMessage(message, {
+          room: admin.sysSessionId,
+          pushData: message,
+          pushAuth: app.pushAuth,
+          apnsName: app.apnsName,
+          leaveMessage: 1
+        });
+      }
+
+      return false;
+    }
+  } else {//自己加入
+    if (session.joinStrategy == 2 || (session.joinStrategy == 4 && session.joinAnswer == data.joinAnswer)) {
+      //生成审核消息
+      let auditAdmin = session.admins.filter(v => !session.noAuditAdmin.includes(v));
+      for (let i = 0; i < auditAdmin.length; i++) {
+        let adminRefKey = auditAdmin[i];
+        let admin = await userService.get(adminRefKey, data.appId);
+        if (!admin) apiError.throw(`session admin (refKey:${adminRefKey}) cannot find`);
+        message.content = JSON.stringify({ refKey: currUser.refKey, fromRefKey: currUser.refKey });
+        message.sessionId = admin.sysSessionId;
+        message.type = 17;
+        //生成系统消息
+        let newMessage = await messageService.storeMessage(message, {
+          room: admin.sysSessionId,
+          pushData: message,
+          pushAuth: app.pushAuth,
+          apnsName: app.apnsName,
+          leaveMessage: 1
+        });
+      }
+      return false;
+    } else if (session.joinStrategy == 3 && session.joinAnswer != data.joinAnswer) {
+      apiError.throw(1029);
+    } else if (session.joinStrategy == 4 && session.joinAnswer != data.joinAnswer) {
+      apiError.throw(1029);
+    } else if (session.joinStrategy == 5) {
+      apiError.throw(1028);
+    }
+    data.members = [{ type: 'U', id: currUser.refKey }];
+  }
+
+  return true;
+}
+
+//加入会话不验证与现有会话中的成员是否重复，交由数据库去重
 //不对邀请本身进行校验，交由调用方校验
-async function _invite(app, session, members, user, backView) {
+//该方法可能被调用的情况：创建会话时邀请加入会话，会话为自由加入时用户加入会话，
+//会话为需要回答问题时用户回答正确问题，管理员邀请加入会话，
+//普通用户邀请其他人加入并且会话为无需审核直接邀请,
+//普通用户邀请其他人加入并且会话成员数没有达到一定数量
+//用户同意别人邀请，管理员同意用户加入，
+async function _enter(app, session, members, from, historyView) {
   //解析members
   let maxMemberCount = Math.min(session.maxMemberCount, app.maxMemberCount);
-  let parseMembers = await parseMembersFn(members, maxMemberCount);
+  let parseMembers = await parseMembersFn(members, 100);//一次最多新增100个成员
   if (parseMembers.length < 1) apiError.throw('parseMembers at least one');
 
   //判断成员数是否超标
@@ -304,51 +601,35 @@ async function _invite(app, session, members, user, backView) {
   if (memberCount + parseMembers.length > maxMemberCount) {
     apiError.throw('session members > session maxMemberCount');
   }
+
+  //过滤需要同意才能加入会话的用户
+  let noAgreeMembers = await inviteAgree(app, from, parseMembers, session);
+
+  if (noAgreeMembers.length <= 0) return;
+
   //更新用户会话关联信息
-  let userNicknames = await updateSessionInfo(app.id, session, parseMembers, backView);
+  await updateSessionInfo(app.id, session, noAgreeMembers, historyView);
 
-  //更新private字段,同时检查如果没有name，则根据members更新name
-  let sessionInfoList = await sessionInfoModel.find({
-    appId: app.id,
-    sessionId: session.id,
-    outside: 0
-  }, 'refKey nickname').limit(5);
-  if (sessionInfoList.length > 2) {
-    if (!newSession.name) {
-      let otherNicknameList = [];
-      for (let i = 0; i < sessionInfoList.length; i++) {
-        let sessionInfo = sessionInfoList[i];
-        if (sessionInfo.nickname) {
-          otherNicknameList.push(other.nickname);
-        } else {
-          let other = await userService.get(sessionInfo.refKey, app.id);
-          otherNicknameList.push(other.nickname);
-        }
-      }
-      await sessionModel.findByIdAndUpdate(newSession.id, {
-        private: 0,
-        name: otherNicknameList.join('、')
-      }, { runValidators: true });
-    } else if (newSession.private == 1) {
-      await sessionModel.findByIdAndUpdate(newSession.id, { private: 0, runValidators: true });
-    }
-  } else if (sessionInfoList.length == 2) {
-    let privateKey = sessionInfoList[0].refKey + '-' + sessionInfoList[1].refKey;
-    if (sessionInfoList[1].refKey > sessionInfoList[0].refKey) {
-      sessionInfoList[1].refKey + '-' + sessionInfoList[0].refKey;
-    }
-    await sessionModel.findByIdAndUpdate(newSession.id, { private: 1, privateKey: privateKey }, { runValidators: true });
+  //更新会话信息
+  updateSessionForMemberChange(app, session);
+
+  let nicknameStr = noAgreeMembers.map(v => v.nickname).join('、');
+  let prefix = '';
+  let msgType = 4;
+  if (noAgreeMembers.length > 1 || noAgreeMembers[0].refKey != from.refKey) {
+    prefix = from.nickname + ' 邀请 ';
+    msgType = 5;
   }
-
   //初始化新消息
   let message = {
     sessionId: session.id,
     appId: app.id,
-    from: user.refKey,
-    content: ' 邀请 ' + userNicknames.join('、') + '加入聊天',
-    type: 5,
+    from: from.refKey,
+    content: prefix + nicknameStr + ' 加入聊天',
+    type: msgType,
     fromSys: 1,
     apnsName: app.apnsName,
+    leaveMessage: 1,
     createdAt: new Date()
   }
   //生成系统消息
@@ -360,40 +641,130 @@ async function _invite(app, session, members, user, backView) {
     leaveMessage: 1
   });
 
+}
+
+async function updateSessionForMemberChange(app, session) {
+  let limit = 9;
+  //更新private字段,同时检查如果没有name，则根据members更新name
+  let sessionInfoList = await sessionInfoModel.find({
+    appId: app.id,
+    sessionId: session.id,
+    outside: 0
+  }, 'refKey nickname').limit(limit);
+
+  //如果是私聊则直接更新 private privateKey memberCount 无需计算
+  if (sessionInfoList.length == 2) {
+    let privateKey = createPrivateKeyFn(sessionInfoList[0].refKey, sessionInfoList[1].refKey);
+    await sessionModel.findByIdAndUpdate(session.id, {
+      private: 1,
+      privateKey: privateKey,
+      memberCount: 2
+    }, { runValidators: true });
+    return;
+  }
+
+  let memberCount = sessionInfoList.length;
+  if (memberCount == limit) {
+    memberCount = await sessionInfoModel.count({
+      appId: app.id,
+      sessionId: session.id,
+      outside: 0
+    });
+  }
+
+  if (!session.name) {
+    let otherNicknameList = [];
+    for (let i = 0; i < sessionInfoList.length; i++) {
+      let sessionInfo = sessionInfoList[i];
+      if (sessionInfo.nickname) {//尽量用会话中的昵称
+        otherNicknameList.push(other.nickname);
+      } else {
+        let other = await userService.get(sessionInfo.refKey, app.id);
+        otherNicknameList.push(other.nickname);
+      }
+    }
+    await sessionModel.findByIdAndUpdate(session.id, {
+      private: 0,
+      name: otherNicknameList.join('、').substr(0, 100),
+      memberCount: memberCount
+    }, { runValidators: true });
+  } else if (session.private == 1) {
+    await sessionModel.findByIdAndUpdate(session.id, {
+      private: 0,
+      memberCount: memberCount
+    }, { runValidators: true });
+  } else {
+    await sessionModel.findByIdAndUpdate(session.id, {
+      memberCount: memberCount
+    }, { runValidators: true });
+  }
 
 }
 
-async function updateSessionInfo(appId, session, members, backView) {
-  let userNicknames = [];
+//查看每一个成员信息，判断是否需要邀请通知
+async function inviteAgree(app, from, members, session) {
+  let noAgreeMembers = [];
   for (let i = 0; i < members.length; i++) {
-    let memberId = members[i];
-    let user = await userService.get(memberId, appId);
-    if (!user) apiError.throw('member id:' + memberId + ' does not exist');
-    if (user.appId != appId) apiError.throw('user:' + memberId + ' appId:' + appId + ' does not exist');
-    userNicknames.push(user.nickname);
+    let member = members[i];
+    let user = await userService.get(member, app.id);
+    if (!user) apiError.throw(`user(refKey:${member}) cannot find`);
+    if (user.joinSessionAgree == 1 && member != from.refKey) {
+      //发送是否同意的通知消息
+      //初始化新消息
+      let message = {
+        sessionId: user.sysSessionId,
+        appId: app.id,
+        from: app.simUser,
+        content: JSON.stringify({ refKey: member, fromRefKey: from.refKey }),
+        type: 15,
+        fromSys: 1,
+        apnsName: app.apnsName,
+        leaveMessage: 1,
+        createdAt: new Date(),
+        relevantSessionId: session.id
+      }
+      //生成系统消息
+      let newMessage = await messageService.storeMessage(message, {
+        room: user.sysSessionId,
+        pushData: message,
+        pushAuth: app.pushAuth,
+        apnsName: app.apnsName,
+        leaveMessage: 1
+      });
+    } else {
+      noAgreeMembers.push(user);
+    }
+  }
+  return noAgreeMembers;
+}
+
+async function updateSessionInfo(appId, session, members, historyView) {
+  for (let i = 0; i < members.length; i++) {
+    let user = members[i];
 
     let updater = {
       del: 0,
       joinDate: new Date(),
       clearDate: null,
       stick: 0,
-      outside: 0
+      outside: 0,
+      endMsgId: null
     };
-    if (backView == 1) {
+    //historyView = 1 可以查看加入会话之前的消息
+    if (historyView !== 1) {
       updater.startMsgId = session.msgMaxCount + 1;
     }
     await sessionInfoModel.update({
       sessionId: session.id,
-      refKey: memberId,
+      refKey: user.refKey,
       appId: appId
     }, updater, { upsert: true });
   }
 
-  return userNicknames;
 }
 
 //如果type 为 S 不在校验会话本身是否有效(lock,del,appId)
-//该方法主要是过滤重复的用户，以及解析会话中的成员，并进行合并
+//该方法主要是过滤members中重复的用户，以及解析会话中的成员，并进行合并
 async function parseMembersFn(members, maxMemberCount) {
   if (members.length > maxMemberCount) apiError.throw(1017);
   let newMembers = [];
@@ -403,7 +774,7 @@ async function parseMembersFn(members, maxMemberCount) {
     if (!member.id) apiError.throw('member id cannot be empty');
 
     if (member.type == 'U') {
-      if (newMembers.indexOf(member.id) == -1) {
+      if (!newMembers.includes(member.id)) {
         if (newMembers.length >= maxMemberCount) apiError.throw(1017);
         newMembers.push(member.id);
       }
@@ -413,13 +784,12 @@ async function parseMembersFn(members, maxMemberCount) {
         outside: 0
       }, 'refKey');
 
-      for (let i = 0; i < sessionInfoList.length; i++) {
-        let memberId = sessionInfoList[i].refKey;
-        if (newMembers.indexOf(memberId) == -1) {
+      sessionInfoList.forEach(function (value) {
+        if (!newMembers.includes(value.refKey)) {
           if (newMembers.length >= maxMemberCount) apiError.throw(1017);
-          newMembers.push(memberId);
+          newMembers.push(value.refKey);
         }
-      }
+      })
     }
   }
 
@@ -427,53 +797,56 @@ async function parseMembersFn(members, maxMemberCount) {
 }
 
 async function createSysMsg(data, msg, pushObj) {
+  msg.createdAt = new Date();
+  msg.content = '修改会话信息';
+  pushObj.pushData = msg;
   if (util.isString(data.name)) {
     msg.type = 3;
-    pushObj.pushData = msg;
-    msg.createdAt = new Date();
     await messageService.storeMessage(msg, pushObj);
   }
 
   if (util.isString(data.des)) {
     msg.type = 13;
-    pushObj.pushData = msg;
-    msg.createdAt = new Date();
-    await messageService.storeMessage(msg, pushObj);
-  }
-
-  if (util.isNumber(data.freeze)) {
-    msg.type = 8;
-    pushObj.pushData = msg;
-    msg.createdAt = new Date();
     await messageService.storeMessage(msg, pushObj);
   }
 
   if (util.isNumber(data.mute)) {
     msg.type = 9;
-    pushObj.pushData = msg;
-    msg.createdAt = new Date();
     await messageService.storeMessage(msg, pushObj);
   }
 
   if (util.isNumber(data.lock)) {
     msg.type = 10;
-    pushObj.pushData = msg;
-    msg.createdAt = new Date();
     await messageService.storeMessage(msg, pushObj);
   }
 
   if (util.isNumber(data.del)) {
     msg.type = 14;
-    pushObj.pushData = msg;
-    msg.createdAt = new Date();
     await messageService.storeMessage(msg, pushObj);
   }
 
   if (util.isString(data.owner)) {
     msg.type = 11;
-    pushObj.pushData = msg;
-    msg.createdAt = new Date();
     await messageService.storeMessage(msg, pushObj);
   }
 
+  if (util.isString(data.notice)) {
+    msg.type = 12;
+    await messageService.storeMessage(msg, pushObj);
+  }
+
+}
+
+async function listFn(data) {
+  let oldData = data;
+  data = _util.pick(data, ' type category publicSearch private name joinStrategy inviteStrategy founder owner mute del lock');
+  if (!oldData.appId) apiError.throw('appId cannot be empty');
+
+  let limit = oldData.pageSize || 10;
+  let skip = ((oldData.page || 1) - 1) * limit;
+  if (data.name) data.name = new RegExp(data.name, 'i');
+  if (oldData.admin) data.admins = oldData.admin;
+  let sessionList = await sessionModel.find(data).limit(limit).skip(skip);
+
+  return sessionList.map(v => v.obj);
 }

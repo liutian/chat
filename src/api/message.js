@@ -27,7 +27,7 @@ module.exports = function (router) {
    * @apiSuccess {String} textContent 消息内容纯文本
    * @apiSuccess {String} pushResult 消息推送结果信息,该信息是异步更新,发送消息返回的结果不会有该信息,该字段只是帮助后续查询使用
    * @apiSuccess {Number} contentType 消息内容类型 1:纯文本 2:图文 3:图片 4:语音 5:文件 6:视频 7:位置
-   * @apiSuccess {Number} type 消息类型 1:正常消息 2:创建会话 3:修改会话名称 4:有人加入群聊 5:邀请加入 6:退出群聊 7:被踢出群聊 8:冻结会话 9:禁言会话 10:锁定会话 11:会话所有人变动 12:更新公告
+   * @apiSuccess {Number} type 消息类型 1:正常消息 2:创建会话 3:修改会话名称 4:有人加入群聊 5:邀请加入 6:退出群聊 7:被踢出群聊 8:冻结会话 9:禁言会话 10:锁定会话 11:会话所有人变动 12:更新公告 13被邀请加入会话(被邀请用户可以看到该消息，需要同意) 14加入会话需要审核(会话管理员可以看到)
    * @apiSuccess {String} apnsName 消息推送时的apnsName
    * @apiSuccess {Number} leaveMessage 是否接收离线消息
    * @apiSuccess {Number} fromSys 是否是系统自动生成的消息
@@ -40,7 +40,7 @@ module.exports = function (router) {
 
   /**
    * @api {get} /api/message 查询会话消息[客户端]
-   * @apiName search-session-message
+   * @apiName search session-message
    * @apiGroup message
    *
    * @apiUse client_auth

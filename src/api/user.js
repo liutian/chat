@@ -7,7 +7,7 @@ module.exports = function (router) {
 
   /**
    * @api {post} /server-api/user/create 创建用户[第三方服务器]
-   * @apiName create User
+   * @apiName create user
    * @apiGroup user
    *
    * @apiUse server_auth
@@ -26,7 +26,7 @@ module.exports = function (router) {
 
   /**
    * @api {post} /server-api/user 更新用户信息[第三方服务器]
-   * @apiName update User
+   * @apiName update user
    * @apiGroup user
    *
    * @apiUse server_auth
@@ -59,7 +59,7 @@ module.exports = function (router) {
 
   /**
    * @api {post} /api/user 更新用户信息[客户端]
-   * @apiName update User[client]
+   * @apiName update user
    * @apiGroup user
    *
    * @apiUse client_auth
@@ -72,6 +72,25 @@ module.exports = function (router) {
    *
    */
   router.post('/api/user', updateUser);
+
+  /**
+   * @api {get} /api/user 查询用户[客户端]
+   * @apiName search user
+   * @apiGroup user
+   *
+   * @apiUse client_auth
+   *
+   * @apiParam {String} [nickname] 用户昵称
+   * @apiParam {Number} [sex] 用户性别 1:男 2:女 3:其他
+   * @apiParam {[Number]} [location] 用户地理位置
+   * @apiParam {Number} [locationRadius] 搜索半径
+   * @apiParam {Number} [del] 用户地理位置
+   * @apiParam {Number} [lock] 用户地理位置
+   * @apiParam {Number} [page] 分页页数
+   * @apiParam {Number} [pageSize] 每一页显示数据量
+   *
+   */
+  router.get('/api/user', findUser);
 
 }
 
@@ -101,4 +120,10 @@ async function auth(ctx, next) {
   let appId = ctx.get('AppKey');
   let tokenExpiry = ctx.request.query.tokenExpiry;
   ctx.body = await userService.auth(refKey, appId, tokenExpiry);
+}
+
+async function findUser(ctx, next) {
+  let data = ctx.request.query;
+  data.appId = ctx.session.user.appId;
+  ctx.body = await userService.list(data);
 }
