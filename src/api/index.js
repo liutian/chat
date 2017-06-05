@@ -23,18 +23,22 @@ app.keys = [(config.cookie_keys || 'ichat-cookie-zaq12wsx')];
 //记录响应时间
 app.use(responseTime);
 
+//跨域请求处理
+app.use(cors);
+
 // 客户端接口认证
 const sessionMiddleware = session({
   key: (config.session_keys || 'ichat-session-mko09ijn'),
   maxAge: config.cookie_session_expiry * 1000 * 60
 }, app);
-router.all('/api/*', sessionMiddleware, cert.client, bodyParser());
+
+router.all('/api/*', corsFilter, sessionMiddleware, cert.client, bodyParser());
 
 // 第三方服务器认证
-router.all('/server-api/*', cert.server, bodyParser());
+router.all('/server-api/*', corsFilter, cert.server, bodyParser());
 
 // 平台接口认证
-router.all('/platform-api/*', cert.platform, bodyParser());
+router.all('/platform-api/*', corsFilter, cert.platform, bodyParser());
 
 // 加载所有接口
 fs.readdirSync(__dirname).forEach(function (filename) {
@@ -56,6 +60,28 @@ async function responseTime(ctx, next) {
   let start = Date.now();
   await next();
   ctx.set('X-Response-Time', (Date.now() - start) + 'ms');
+}
+
+async function cors(ctx, next) {
+
+  await next();
+
+  //只需要检查options类型的请求，因为系统所有接口的Content-Type都为application/json，所有浏览器肯定会先发送预检请求
+  ctx.set('Access-Control-Allow-Origin', ctx.get('Origin'));
+  ctx.set('Access-Control-Allow-Credentials', true);
+  if (ctx.method == 'OPTIONS') {
+    ctx.set('Access-Control-Allow-Methods', 'GET, POST');
+    ctx.set('Access-Control-Allow-Headers', 'Content-Type, AdminKey, Nonce, Timestamp, Signature, AppKey, Token, AppId, RefKey');
+    ctx.set('Access-Control-Max-Age', 2592000);//有效期30天
+  }
+}
+
+async function corsFilter(ctx, next) {
+  if (ctx.method == 'OPTIONS') {
+    ctx.body = '';
+  } else {
+    await next();
+  }
 }
 
 function onerror(err) {

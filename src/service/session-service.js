@@ -65,9 +65,9 @@ async function exitFn(data) {
     outside: 0
   });
   if (!sessionInfo) apiError.throw('you are not session member');
-  let session = await sessionModel.findById(data.sessionId);
+  let session = await sessionModel.findById(data.sessionId, '-latestMessage');
   if (!session) apiError.throw('session cannot find');
-  if (session.lock == 1) apiError.throw(1020)
+  if (session.lock == 1) apiError.throw(1020);
 
   if (!data.members || data.members.length <= 0) {
     if (data.refKey == session.owner) apiError.throw('you are owner cannot exit session');
@@ -86,6 +86,12 @@ async function _exit(members, session, app, user) {
       apiError.throw('admin cannot be kicked out');
     }
   });
+
+  let memberList = await userModel.find({
+    refKey: { $in: members },
+    appId: app.id
+  }, 'nickname');
+  if (memberList.length <= 0) return;
 
   await sessionInfoModel.update({
     appId: app.id,
@@ -118,15 +124,12 @@ async function _exit(members, session, app, user) {
     memberCount: memberCount
   });
 
-  let userList = await userModel.find({
-    refKey: { $in: members },
-    appId: app.id
-  }, 'nickname');
-  let nicknameStr = userList.map(v => v.nickname).join('、');
+
+  let nicknameStr = memberList.map(v => v.nickname).join('、');
   let msgType = 7;
   if (members.length > 1) {
     nicknameStr += ' 被踢出会话';
-  } else {
+  } else if (members.length == 1) {
     msgType = 6;
     nicknameStr += ' 退出会话'
   }
@@ -159,23 +162,7 @@ async function updateSessionInfoFn(data) {
   if (!data.refKey) apiError.throw('refKey cannot be empty');
   if (!data.appId) apiError.throw('appId cannot be empty');
   if (!data.sessionId) apiError.throw('sessionId cannot be empty');
-  data = _util.pick(data, 'nickname background stick quiet');
-
-  if (oldData.remark) {
-    let session = await sessionModel.findById(oldData.sessionId, 'private privateKey');
-    if (!session) apiError.throw('session cannot find');
-    if (!session.privateKey || session.private != 1 || !session.privateKey.include(oldData.refKey)) {
-      apiError.throw('you are not session member');
-    }
-    let otherId = session.privateKey.split('-').find(v => v != oldData.refKey);
-    await sessionInfoModel.findOneAndUpdate({
-      sessionId: oldData.sessionId,
-      appId: oldData.appId,
-      refKey: otherId
-    }, { remark: oldData.remark }, { runValidators: true });
-
-    if (Object.keys(oldData).length == 1) return;
-  }
+  data = _util.pick(data, 'nickname background stick quiet otherRemark');
 
   if (oldData.remove == 1) data.clearDate = new Date();
   await sessionInfoModel.findOneAndUpdate({
@@ -192,7 +179,7 @@ async function updateFn(data) {
   if (!data.refKey) apiError.throw('refKey cannot be empty');
   if (!data.appId) apiError.throw('appId cannot be empty');
   if (!data.sessionId) apiError.throw('sessionId cannot be empty');
-  data = _util.pick(data, ` category hideNickname publicSearch name avator anonymously
+  data = _util.pick(data, ` category publicSearch name avator anonymously
    joinStrategy inviteStrategy des maxMemberCount owner admins noAuditAdmin notice
    joinQuestion joinAnswer mute del lock`);
 
@@ -212,14 +199,34 @@ async function updateFn(data) {
   if (!session) apiError.throw('session cannot find');
   if (session.appId != oldData.appId) apiError.throw(`session cannot find in appId:${oldData.appId}`);
   //校验当前用户是否有管理权限
-  if (session.owner != oldData.refKey && !session.admins.include(oldData.refKey)) {
+  if (session.owner != oldData.refKey && !session.admins.includes(oldData.refKey)) {
     apiError.throw('you are not session admin');
   }
 
   //只有会话所有者才可以移交会话所有人，新增/删除管理员，解散/锁定会话
   if ((data.owner || data.admins || data.del == 1 || data.lock == 1
-    || data.noAuditAdmin) && data.owner != oldData.refKey) {
+    || data.noAuditAdmin) && session.owner != oldData.refKey) {
     apiError.throw('you are not owner');
+  }
+
+  if (data.owner) {
+    let isMember = await sessionInfoModel.count({
+      sessionId: oldData.sessionId,
+      appId: oldData.appId,
+      refKey: data.owner,
+      outside: 0
+    });
+    if (isMember <= 0) apiError.throw('owner cannot be session member');
+  }
+
+  if (Array.isArray(data.admins) && data.admins.length > 0) {
+    let memberCount = await sessionInfoModel.count({
+      sessionId: oldData.sessionId,
+      appId: oldData.appId,
+      refKey: { $in: data.admins },
+      outside: 0
+    });
+    if (memberCount < data.admins.length) apiError.throw('admins cannot be session member');
   }
 
   data.updateDate = new Date();
@@ -271,7 +278,7 @@ async function listHistoryFn(data) {
 
   //每次都查出来所有关联的会话，然后在进行筛选
   let query = { refKey: data.refKey, appId: data.appId };
-  let sessionInfoList = await sessionInfoModel.find(query, 'sessionId stick quiet clearDate outside');
+  let sessionInfoList = await sessionInfoModel.find(query);
   let sessionInfoMap = {};
   sessionInfoList.forEach((value, index) => sessionInfoMap[value.sessionId] = value.obj);
   let sessionList = await sessionModel.find({
@@ -282,15 +289,17 @@ async function listHistoryFn(data) {
   let noStickSession = [];
   for (let i = 0; i < sessionList.length; i++) {
     let session = sessionList[i].obj;
-    Object.assign(session, _util.pick(sessionInfoMap[session.id], '-sessionId'));
+    Object.assign(session, _util.pick(sessionInfoMap[session.id], '** -sessionId -id'));
 
     //默认只查询会话中最新消息时间比clearDate大的会话
-    if (data.searchAll != 1 && session.clearDate && session.latestMessage && session.latestMessage.createdAt
-      && session.latestMessage.createdAt.getTime() <= session.clearDate.getTime()) continue;
+    if (data.searchAll != 1 && session.clearDate && (!session.latestMessage || (session.latestMessage && session.latestMessage.createdAt
+      && session.latestMessage.createdAt.getTime() <= session.clearDate.getTime()))) continue;
 
     if (session.private == 1 && session.privateKey && !session.name) {
-      let otherId = session.privateKey.split('-').find(v => v == data.refKey);
-      if (otherId) {
+      let otherId = session.privateKey.split('_').find(v => v == data.refKey);
+      if (session.otherRemark) {
+        session.name = session.otherRemark;
+      } else if (otherId) {
         let other = await userService.get(otherId, data.appId);
         session.name = other.nickname;
       } else {
@@ -330,17 +339,17 @@ async function createFn(data) {
   if (app.del == 1) apiError.throw(1027);
 
 
-  let privateSession = Array.isArray(data.members) && data.members.length == 1
-    && data.members[0].type == 'U' && data.members[0].id != data.founder;
+  let privateSession = Array.isArray(oldData.members) && oldData.members.length == 1
+    && oldData.members[0].type == 'U' && oldData.members[0].id != data.founder;
   //检查如果存在当前用户和members[0]在一个会话，而且该会话只有这两个人则直接返回该会话
   if (privateSession) {
-    let otherId = data.members[0].id;
-    let privateKey = createPrivateKey(otherId, data.founder);
+    let otherId = oldData.members[0].id;
+    let privateKey = createPrivateKeyFn(otherId, data.founder);
     let _session = await sessionModel.findOne({
       appId: data.appId,
       private: 1,
       privateKey: privateKey
-    }, '_id');
+    }, '-latestMessage');
     //如果存在私聊会话则直接返回会话信息
     if (_session) {
       return _session.obj;
@@ -354,7 +363,7 @@ async function createFn(data) {
   //初始化数据
   data.appId = data.appId;
   data.owner = data.founder;
-  data.admins = [data.founder];//默认创建时只有一个管理员
+  data.admins = [];//默认创建时只有一个管理员
   data.letterName = data.name && letter(data.name)[0];
 
   //存储会话
@@ -842,10 +851,11 @@ async function listFn(data) {
   data = _util.pick(data, ' type category publicSearch private name joinStrategy inviteStrategy founder owner mute del lock');
   if (!oldData.appId) apiError.throw('appId cannot be empty');
 
-  let limit = oldData.pageSize || 10;
-  let skip = ((oldData.page || 1) - 1) * limit;
+  let limit = +oldData.pageSize || 10;
+  let skip = ((+oldData.page || 1) - 1) * limit;
   if (data.name) data.name = new RegExp(data.name, 'i');
   if (oldData.admin) data.admins = oldData.admin;
+  data.publicSearch = 1;
   let sessionList = await sessionModel.find(data).limit(limit).skip(skip);
 
   return sessionList.map(v => v.obj);

@@ -16,6 +16,11 @@ const config = require('../config');
 mongoose.plugin(function (schema, options) {
   schema.virtual('obj').get(function () {
     let obj = this.toObject();
+    Object.keys(obj).forEach(function (key) {
+      if (obj[key] instanceof mongoose.Types.ObjectId) {
+        obj[key] = obj[key].toString();
+      }
+    })
     obj.id = obj._id;
     delete obj._id;
     delete obj.__v;

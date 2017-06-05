@@ -19,13 +19,15 @@ module.exports = function (router) {
    * @apiParam {[Number]} [location] 用户地理位置
    * @apiParam {String} [des] 用户自己描述
    *
+   * @apiSampleRequest /server-api/user/create
+   *
    * @apiSuccess {String} id 用户唯一标示
    *
    */
   router.post('/server-api/user/create', serverCreateUser);
 
   /**
-   * @api {post} /server-api/user 更新用户信息[第三方服务器]
+   * @api {post} /server-api/user/update 更新用户信息[第三方服务器]
    * @apiName update user
    * @apiGroup user
    *
@@ -40,6 +42,8 @@ module.exports = function (router) {
    * @apiParam {Number} [del] 是否删除
    * @apiParam {Number} [lock] 是否锁定
    *
+   * @apiSampleRequest /server-api/user
+   *
    */
   router.post('/server-api/user/update', serverUpdateUser);
 
@@ -52,6 +56,8 @@ module.exports = function (router) {
    *
    * @apiParam {String} refKey 用户在第三方服务器中的唯一标示一般为用户ID
    *
+   * @apiSampleRequest /server-api/user/auth
+   *
    * @apiSuccess {String} token 客户端请求接口时的认证token
    * @apiSuccess {String} [tokenExpiry] token有效期单位小时
    */
@@ -59,7 +65,7 @@ module.exports = function (router) {
 
   /**
    * @api {post} /api/user 更新用户信息[客户端]
-   * @apiName update user
+   * @apiName update self
    * @apiGroup user
    *
    * @apiUse client_auth
@@ -69,6 +75,8 @@ module.exports = function (router) {
    * @apiParam {Number} [sex] 用户性别 1:男 2:女 3:其他
    * @apiParam {[Number]} [location] 用户地理位置
    * @apiParam {String} [des] 用户自己描述
+   *
+   * @apiSampleRequest /api/user
    *
    */
   router.post('/api/user', updateUser);
@@ -88,6 +96,8 @@ module.exports = function (router) {
    * @apiParam {Number} [lock] 用户地理位置
    * @apiParam {Number} [page] 分页页数
    * @apiParam {Number} [pageSize] 每一页显示数据量
+   *
+   * @apiSampleRequest /api/user
    *
    */
   router.get('/api/user', findUser);

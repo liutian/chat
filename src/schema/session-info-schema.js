@@ -11,7 +11,7 @@ const sessionInfoSchema = new Schema({
   background: { type: String, trim: true, maxlength: 200 },//该会话的背景图
   joinDate: { type: Date },//加入会话的时间
   speakDate: { type: Date },//最后一次发消息，已用户身份生成的消息不作为真正的发消息
-  remark: { type: String, trim: true, maxlength: 50 },//私聊时用户可以备注对方,该字段有对方修改自己不能修改
+  otherRemark: { type: String, trim: true, maxlength: 50 },//私聊时用户可以备注对方,该字段有对方修改自己不能修改
   stick: { //置顶
     type: Number,
     min: 0,

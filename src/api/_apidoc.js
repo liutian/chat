@@ -16,10 +16,10 @@
 
 /**
  * @apiDefine platform_auth
- * @apiHeader AdminKey 超级管理员唯一标示
+ * @apiHeader AdminKey 超级管理员唯一标示key
  * @apiHeader Nonce 随机字符串
- * @apiHeader Timestamp 当前时间戳
- * @apiHeader Signature 超级管理员的secret+Nonce+Timestamp，然后通过sha1加密
+ * @apiHeader Timestamp 当前时间戳精确到毫秒
+ * @apiHeader Signature 超级管理员的secret + Nonce + Timestamp，然后通过sha1加密的字符串
  *
  */
 

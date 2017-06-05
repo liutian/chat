@@ -19,7 +19,7 @@ const messageSchema = new Schema({
   content: { type: String, required: true, trim: true, maxlength: 10000 },
   textContent: { type: String, trim: true, maxlength: 10000 },
   pushResult: { type: String },
-  anonymous: { type: Number, min: 0, max: 1, default: 0 },//是否是匿名消息
+  anonymously: { type: Number, min: 0, max: 1, default: 0 },//是否是匿名消息
   //消息内容类型
   contentType: {// 1纯文本 2图文 3图片 4语音 5文件 6视频 7位置
     type: Number,
@@ -40,7 +40,7 @@ const messageSchema = new Schema({
   type: {
     type: Number,
     min: 1,
-    max: 12,
+    max: 20,
     required: true,
     default: 1
   },

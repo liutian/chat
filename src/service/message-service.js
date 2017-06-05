@@ -33,11 +33,14 @@ async function listFn(data) {
     appId: data.appId,
     sessionId: data.sessionId,
     outside: 0
-  }, 'startMsgId endMsgId');
+  });
   if (!sessionInfo) apiError.throw('you are not session member');
 
-  let limit = data.pageSize || 10;
-  let skip = ((data.page || 1) - 1) * limit;
+  let session = await sessionModel.findById(data.sessionId, 'private');
+  if (!session) apiError.throw('session cannot find');
+
+  let limit = +data.pageSize || 10;
+  let skip = ((+data.page || 1) - 1) * limit;
   let query = {
     appId: data.appId,
     sessionId: data.sessionId
@@ -81,10 +84,16 @@ async function listFn(data) {
   let returnMessageList = [];
   for (let i = 0; i < messageList.length; i++) {
     let msg = messageList[i].obj;
-    if (!fromMap[msg.from]) {
+    if (!fromMap[msg.from] && msg.anonymously != 1) {
       fromMap[msg.from] = await userService.get(msg.from, data.appId);
     }
     msg.from = fromMap[msg.from];
+
+    if (msg.anonymously == 1) {
+      msg.from.nickname = '匿名';
+    } else if (session.private == 1 && msg.from.refKey != data.refKey && sessionInfo.otherRemark) {
+      msg.from.nickname = sessionInfo.otherRemark;
+    }
     returnMessageList.push(msg);
   }
 
@@ -93,7 +102,7 @@ async function listFn(data) {
 
 
 async function sendMessageFn(data) {
-  data = _util.pick(data, 'from appId sessionId anonymous type content textContent contentType fromSys leaveMessage apnsName focusMembers');
+  data = _util.pick(data, 'from appId sessionId anonymously type content textContent contentType fromSys leaveMessage apnsName focusMembers');
   //基本数据校验
   if (!data.from) apiError.throw('from cannot be empty');
   if (!data.appId) apiError.throw('appId cannot be empty');
@@ -112,17 +121,8 @@ async function sendMessageFn(data) {
 
   let createdAt = new Date();
 
-  //校验是否有权发消息
-  let sessionInfo = await sessionInfoModal.findOneAndUpdate({
-    sessionId: data.sessionId,
-    appId: data.appId,
-    refKey: data.from,
-    outside: 0
-  }, { speakDate: createdAt }, { new: true });
-  if (!sessionInfo) apiError.throw('you are not session member');
-
   //校验会话信息
-  let session = await sessionModel.findById(data.sessionId, 'owner admins mute appId del lock');
+  let session = await sessionModel.findById(data.sessionId, 'owner admins mute appId del lock anonymously');
   if (!session) apiError.throw('session does not exist');
   if (session.lock == 1) apiError.throw(1020);
   if (session.del == 1) apiError.throw(1021);
@@ -131,6 +131,9 @@ async function sendMessageFn(data) {
   //校验发送消息是否合规
   if (session.mute == 1 && data.from != session.owner && !session.admins.includes(data.from)) {
     apiError.throw(1024);
+  }
+  if (data.anonymously == 1 && session.anonymously != 1) {
+    apiError.throw('session anonymously not eq 1');
   }
 
   //在会话中存储消息相关的信息
@@ -144,6 +147,15 @@ async function sendMessageFn(data) {
     apnsName: util.isString(data.apnsName) ? data.apnsName : app.pushApnsName,
     leaveMessage: data.leaveMessage
   });
+
+  //校验是否有权发消息
+  let sessionInfo = await sessionInfoModal.findOneAndUpdate({
+    sessionId: data.sessionId,
+    appId: data.appId,
+    refKey: data.from,
+    outside: 0
+  }, { speakDate: createdAt }, { new: true });
+  if (!sessionInfo) apiError.throw('you are not session member');
 
   return newMsg.obj;
 }

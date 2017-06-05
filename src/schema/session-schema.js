@@ -22,7 +22,6 @@ const sessionSchema = new Schema({
     min: 1,
     max: 10000
   },
-  hideNickname: { type: Number, min: 0, max: 1, default: 0 },//是否对会话中的成员隐藏昵称，会话所有者和管理员还是可以查看的
   publicSearch: { type: Number, min: 0, max: 1, default: 1 },//是否可以公开搜索到
   private: {//是否是私聊会话
     type: Number,
@@ -39,7 +38,7 @@ const sessionSchema = new Schema({
   joinStrategy: {//会话加入方式 1自由进入 2进入时需要审核 3需要回答问题 4需要回答问题并由管理员审核 5拒绝进入
     type: Number,
     min: 1,
-    max: 6,
+    max: 5,
     default: 1
   },
   inviteStrategy: {//普通成员邀请他人进入会话
@@ -52,7 +51,7 @@ const sessionSchema = new Schema({
   founder: { type: String, required: true },
   // notice: [Notice],//会话公告
   des: { type: String, trim: true, maxlength: 500 },//会话描述
-  maxMemberCount: { type: Number, min: 1, max: 1000 },//限制会话最大成员数
+  maxMemberCount: { type: Number, default: 200, min: 1, max: 1000 },//限制会话最大成员数
   msgMaxCount: { type: Number, required: true, default: 0 },//会话中的总消息数
   latestMessage: Schema.Types.Mixed,//会话中最新的消息
   owner: { type: String, required: true },//会话所有者，值为用户的refKey

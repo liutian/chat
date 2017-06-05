@@ -18,6 +18,8 @@ module.exports = function (router) {
    * @apiParam {String} [pushAuth] 推送服务器认证信息
    * @apiParam {String} [pushApnsName] 推送消息的apnsName 详情见推送服务器接口文档说明
    *
+   * @apiSampleRequest /platform-api/app
+   *
    * @apiSuccess {String} id app唯一标示
    * @apiSuccess {String} secret 认证秘钥
    * @apiSuccess {String} simUser app系统模拟用户id，每一个app都有一个对应的模拟用户，用来给其他用户发送系统通知消息
@@ -48,6 +50,8 @@ module.exports = function (router) {
    * @apiParam {Number} [del] 是否删除
    * @apiParam {Number} [lock] 是否锁定
    *
+   * @apiSampleRequest /platform-api/app
+   *
    * @apiSuccess {Object} result 请求返回参数，参考创建app接口
    *
    */
@@ -68,6 +72,8 @@ module.exports = function (router) {
    * @apiParam {String} [pushApnsName] 推送消息的apnsName 详情见推送服务器接口文档说明
    * @apiParam {Number} [del] 是否删除
    * @apiParam {Number} [lock] 是否锁定
+   *
+   * @apiSampleRequest /server-api/app
    *
    * @apiSuccess {Object} result 请求返回参数，参考创建app接口
    */

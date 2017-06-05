@@ -17,11 +17,14 @@ module.exports = function (router) {
    * @apiParam {String} [apnsName] apns推送时使用的证书
    * @apiParam {String} [leaveMessage] 是否保存离线数据,如果不保留则ios不会收到apns推送信息
    * @apiParam {[String]} [focusMembers] @成员列表
+   * @apiParam {Number} [anonymously] 是否是匿名消息
+   *
+   * @apiSampleRequest /api/message
    *
    * @apiSuccess {Number} msgId 消息id,数值类型递增
    * @apiSuccess {String} sessionId 会话ID
    * @apiSuccess {String} appId 会话所属app
-   * @apiSuccess {Number} anonymous 消息是否是匿名消息
+   * @apiSuccess {Number} anonymously 消息是否是匿名消息
    * @apiSuccess {Object} from 消息发送者，参见用户接口
    * @apiSuccess {Object} content 消息数据
    * @apiSuccess {String} textContent 消息内容纯文本
@@ -52,6 +55,8 @@ module.exports = function (router) {
    * @apiParam {Number} [type]  消息类型
    * @apiParam {Number} [contentType]  消息内容类型
    * @apiParam {Number} [searchAll] 是否查询所有消息，默认只查询有限的消息 (>=startMsgId或者<=endMsgId并且没有删除)
+   *
+   * @apiSampleRequest /api/message
    *
    * @apiSuccess {[Object]} result 请求返回参数，参考发送消息接口
    */
