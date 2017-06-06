@@ -56,7 +56,7 @@ exports.client = async function clientCert(ctx, next) {
     ctx.throw(401, { code: 1007 });
   }
 
-  if (!ctx.session || !ctx.session.user) {
+  if (!ctx.session.user || (ctx.session.user.refKey != refKey || ctx.session.user.appId != appId)) {
 
     //判断app是否有效
     let app = await appService.get(appId);
