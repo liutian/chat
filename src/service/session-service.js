@@ -39,6 +39,8 @@ exports.list = listFn;
 
 exports.createPrivateKey = createPrivateKeyFn;
 
+exports.memberList = memberListFn;
+
 //************************************************************ */
 
 async function exitFn(data) {
@@ -848,7 +850,7 @@ async function createSysMsg(data, msg, pushObj) {
 
 async function listFn(data) {
   let oldData = data;
-  data = _util.pick(data, ' type category publicSearch private name joinStrategy inviteStrategy founder owner mute del lock');
+  data = _util.pick(data, 'appId type category publicSearch private name joinStrategy inviteStrategy founder owner mute del lock');
   if (!oldData.appId) apiError.throw('appId cannot be empty');
 
   let limit = +oldData.pageSize || 10;
@@ -858,5 +860,54 @@ async function listFn(data) {
   data.publicSearch = 1;
   let sessionList = await sessionModel.find(data).limit(limit).skip(skip);
 
-  return sessionList.map(v => v.obj);
+  let returnList = sessionList.map(v => v.obj);
+
+  if (+oldData.searchCount == 1) {
+    let searchCount = await sessionModel.count(data);
+    returnList.push(searchCount);
+  }
+
+  return returnList;
 }
+
+
+async function memberListFn(data) {
+  if (!data.appId) apiError.throw('appId cannot be empty');
+
+  let limit = +data.pageSize || 10;
+  let skip = ((+data.page || 1) - 1) * limit;
+  let sessionInfoList = await sessionInfoModel.find({
+    sessionId: data.id,
+    appId: data.appId,
+    outside: 0
+  }, 'refKey nickname joinDate speakDate').limit(limit).skip(skip);
+
+  let userList = await userModel.find({
+    appId: data.appId,
+    refKey: { $in: sessionInfoList.map(v => v.refKey) }
+  });
+
+  let sessionInfoMap = {};
+  sessionInfoList.forEach(function (v) {
+    sessionInfoMap[v.refKey] = v;
+  });
+
+  let returnList = userList.map(function (u) {
+    let sessionInfo = sessionInfoMap[u.refKey];
+    sessionInfo.sessionNickname = sessionInfo.nickname;
+    Object.assign(u, _util.pick(sessionInfo, 'sessionNickname joinDate speakDate'));
+    return u;
+  });
+
+  if (+data.searchCount == 1) {
+    let searchCount = await sessionInfoModel.count({
+      sessionId: data.id,
+      appId: data.appId,
+      outside: 0
+    });
+    returnList.push(searchCount);
+  }
+
+  return returnList;
+}
+

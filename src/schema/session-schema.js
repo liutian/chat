@@ -56,7 +56,7 @@ const sessionSchema = new Schema({
   latestMessage: Schema.Types.Mixed,//会话中最新的消息
   owner: { type: String, required: true },//会话所有者，值为用户的refKey
   admins: [{ type: String, default: [] }],//会话管理员，值为用户的refKey
-  noAuditAdmin: [{ type: String, default: [] }],
+  noAuditAdmin: [{ type: String, default: [] }],//不需要接收审批类消息的管理员人员列表
   notice: { type: String, trim: true, maxlength: 1000 },
   memberCount: { type: Number, required: true, default: 1 },
   joinQuestion: { type: String },//加入会话时需要回答的问题

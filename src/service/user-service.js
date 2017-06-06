@@ -90,7 +90,7 @@ async function createSysSessionFn(appId, refKey, simUser) {
 }
 
 async function updateUserFn(data) {
-  data = _util.pick(data || {}, ' appId refKey nickname avator sex del lock blackLList des');
+  data = _util.pick(data || {}, ' appId refKey nickname avator sex del lock blackLList des joinSessionAgree location');
   //基本数据校验
   if (!data.refKey || !data.appId) apiError.throw('refKey and appId cannot be empty');
   //校验用户是否存在
@@ -175,5 +175,12 @@ async function listFn(data) {
   data.sim = 0;
   let userList = await userModel.find(data).limit(limit).skip(skip);
 
-  return userList.map(v => v.obj);
+  let returnList = userList.map(v => v.obj);
+
+  if (+oldData.searchCount == 1) {
+    let searchCount = await userModel.count(data);
+    returnList.push(searchCount);
+  }
+
+  return returnList;
 }

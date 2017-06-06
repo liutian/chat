@@ -27,12 +27,15 @@ module.exports = function (router) {
    * @apiSampleRequest /api/session
    *
    * @apiSuccess {String} id 会话ID
+   * @apiSuccess {String} id 会话所属的appId
+   * @apiSuccess {String} name 会话名称
+   * @apiSuccess {String} letterName 会话名称首字母大写
+   * @apiSuccess {String} avator 会话头像
    * @apiSuccess {Number} type 会话类型 1:普通用户会话 2:系统级会话
    * @apiSuccess {Number} category 会话类别比如运动，读书，旅游，美食，具体值由第三方服务器维护
    * @apiSuccess {Number} publicSearch 是否可以公开搜索到
    * @apiSuccess {Number} private 是否是私聊会话
-   * @apiSuccess {String} name 会话名称
-   * @apiSuccess {String} avator 会话头像
+   * @apiSuccess {Number} privateKey 保存私聊会话成员的refKey，降序排列以 '_' 分割
    * @apiSuccess {Number} anonymously 是否可以发送匿名消息
    * @apiSuccess {Number} joinStrategy 加入方式 1自由进入 2进入时需要审核 3需要回答问题 4需要回答问题并由管理员审核 5拒绝进入
    * @apiSuccess {Number} inviteStrategy 普通成员邀请他人进入会话的方式 1无需审核直接邀请进入 2需要管理员审核 3人数达到移动数量才进行审核
@@ -41,6 +44,7 @@ module.exports = function (router) {
    * @apiSuccess {Number} msgMaxCount 会话中的总消息数
    * @apiSuccess {String} des 会话描述
    * @apiSuccess {Object} notice 会话公告
+   * @apiSuccess {Number} memberCount 会话中的成员数
    * @apiSuccess {Object} latestMessage 会话中最新的消息，参见消息接口
    * @apiSuccess {String} owner 会话所有者，值为用户的refKey
    * @apiSuccess {[String]} admins 会话管理员，值为用户的refKey
@@ -52,6 +56,7 @@ module.exports = function (router) {
    * @apiSuccess {String} joinQuestion 加入会话时需要回答的问题
    * @apiSuccess {String} joinAnswer 加入会话时需要回答的问题的答案
    * @apiSuccess {[String]} [noAuditAdmin] 不需要接收审核消息的管理员列表(用户的refKey)
+   * @apiSuccess {Date} [updateDate] 更新会话本身时才会更新该字段(普通成员变动不会更新该字段)
    */
 
   /**
@@ -157,7 +162,7 @@ module.exports = function (router) {
   router.post('/api/session/exit', exit);
 
   /**
-   * @api {get} /api/session/history 查询和用户相关的会话[客户端]
+   * @api {get} /api/session/history 查询用户自己的历史会话[客户端]
    * @apiName search history session list
    * @apiGroup session
    *
@@ -183,7 +188,20 @@ module.exports = function (router) {
    *
    * @apiSampleRequest /api/session/:id
    *
-   * @apiSuccess {Object} result 请求返回参数，参考创建会话接口
+   * stick quiet clearDate outside
+   * @apiSuccess {Object} result 请求返回参数，大部分参考创建会话接口,下面是和用户自己相关的会话信息
+   * @apiSuccess {Number} startMsgId 查询会话消息时最小消息Id
+   * @apiSuccess {Number} endMsgId 查询会话消息时最大消息Id
+   * @apiSuccess {String} nickname 用户在会话中的昵称（只有在会话消息列表，会话成员列表会显示该字段）
+   * @apiSuccess {String} background 该会话的背景图
+   * @apiSuccess {Date} joinDate 用户加入会话的时间
+   * @apiSuccess {Date} speakDate 用户最后一次发言时间
+   * @apiSuccess {Number} stick 该回合是否置顶
+   * @apiSuccess {Number} quiet 是否开启消息免打扰,暂时只是用来显示不用来逻辑判断
+   * @apiSuccess {Date} clearDate 用户主动清除会话时的时间
+   * @apiSuccess {Number} outside 退出会话时该字段为1
+   * @apiSuccess {String} otherRemark 私聊时用户可以备注对方,该字段有对方修改自己不能修改
+   *
    */
   router.get('/api/session/:id', getSession);
 
@@ -232,12 +250,30 @@ module.exports = function (router) {
    * @apiParam {Number} [lock] 会话是否锁定
    * @apiParam {Number} [page] 分页页数
    * @apiParam {Number} [pageSize] 每一页显示数据量
+   * @apiParam {Number} [searchCount] 是否返回符合条件的总数据个数,可以在响应头的searchCount字段获取该值
    *
    * @apiSampleRequest /api/session
    *
    * @apiSuccess {[Object]} result 请求返回参数，参考创建会话接口
    */
   router.get('/api/session', findSession);
+
+  /**
+   * @api {get} /api/session/:id/member 查询会话成员列表[客户端]
+   * @apiName search session member list
+   * @apiGroup session
+   *
+   * @apiUse client_auth
+   *
+   * @apiParam {Number} [page] 分页页数
+   * @apiParam {Number} [pageSize] 每一页显示数据量
+   * @apiParam {Number} [searchCount] 是否返回符合条件的总数据个数,可以在响应头的searchCount字段获取该值
+   *
+   * @apiSampleRequest /api/session/:id/member
+   *
+   * @apiSuccess {[Object]} result 请求返回参数，参考创建用户接口
+   */
+  router.get('/api/session/:id/member', findSessionMember);
 }
 
 
@@ -291,6 +327,26 @@ async function saveSessionInfo(ctx, next) {
 }
 
 async function findSession(ctx, next) {
-  ctx.request.query.appId = ctx.session.user.appId;
-  ctx.body = await sessionService.list(ctx.request.query);
+  let data = ctx.request.query;
+  data.appId = ctx.session.user.appId;
+  let list = await sessionService.list(data);
+  if (+data.searchCount == 1) {
+    ctx.set('searchCount', list.pop());
+  }
+
+  ctx.body = list;
 }
+
+async function findSessionMember(ctx, next) {
+  let data = ctx.request.query;
+  data.appId = ctx.session.user.appId;
+  data.id = ctx.params.id;
+  let list = await sessionService.memberList(data);
+  if (+data.searchCount == 1) {
+    ctx.set('searchCount', list.pop());
+  }
+
+  ctx.body = list;
+}
+
+

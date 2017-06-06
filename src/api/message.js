@@ -24,13 +24,16 @@ module.exports = function (router) {
    * @apiSuccess {Number} msgId 消息id,数值类型递增
    * @apiSuccess {String} sessionId 会话ID
    * @apiSuccess {String} appId 会话所属app
-   * @apiSuccess {Number} anonymously 消息是否是匿名消息
-   * @apiSuccess {Object} from 消息发送者，参见用户接口
+   * @apiSuccess {String} relevantSessionId 相关会话ID，应用于审批流程
+   * @apiSuccess {String} relevantToken //关联操作ID
+   * @apiSuccess {String} relevantStatus 关联事件是否操作完成比如是否审批用户加入，用户是否同意加入 1 未处理 2同意 3拒绝
+   * @apiSuccess {Object} from 消息发送者refKey，参见用户接口
    * @apiSuccess {Object} content 消息数据
    * @apiSuccess {String} textContent 消息内容纯文本
    * @apiSuccess {String} pushResult 消息推送结果信息,该信息是异步更新,发送消息返回的结果不会有该信息,该字段只是帮助后续查询使用
+   * @apiSuccess {Number} anonymously 消息是否是匿名消息
    * @apiSuccess {Number} contentType 消息内容类型 1:纯文本 2:图文 3:图片 4:语音 5:文件 6:视频 7:位置
-   * @apiSuccess {Number} type 消息类型 1:正常消息 2:创建会话 3:修改会话名称 4:有人加入群聊 5:邀请加入 6:退出群聊 7:被踢出群聊 8:冻结会话 9:禁言会话 10:锁定会话 11:会话所有人变动 12:更新公告 13被邀请加入会话(被邀请用户可以看到该消息，需要同意) 14加入会话需要审核(会话管理员可以看到)
+   * @apiSuccess {Number} type 消息类型 1正常消息 2创建会话 3修改会话名称 4有人加入群聊 5邀请加入 6退出群聊 7被踢出群聊 9禁言会话 10锁定会话 11移交会话所有者 12更新公告 13更新会话描述 14解散会话 15被邀请需要同意 16邀请他人加入需要审核 17加入会话需要审核 18被邀请需要同意时被拒绝 19邀请他人加入需要审核时被拒绝 20加入会话需要审核时被拒绝
    * @apiSuccess {String} apnsName 消息推送时的apnsName
    * @apiSuccess {Number} leaveMessage 是否接收离线消息
    * @apiSuccess {Number} fromSys 是否是系统自动生成的消息

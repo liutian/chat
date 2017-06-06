@@ -40,7 +40,7 @@ async function createAppFn(data) {
   let newSimUserData = {
     appId: newApp.id,
     sim: 1,
-    refKey: 'simuser_' + (await _util.random(5)),
+    refKey: 'simuser_' + newApp.id.toString(),
     nickname: '模拟用户'
   }
   newSimUserData.letterNickname = letter(newSimUserData.nickname)[0];

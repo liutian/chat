@@ -5,7 +5,7 @@ const appServer = require('../service/app-service');
 module.exports = function (router) {
 
   /**
-   * @api {post} /platform-api/app 创建App[平台管理员]
+   * @api {post} /platform-api/app 创建App[平台]
    * @apiName create App[admin]
    * @apiGroup app
    *
@@ -22,7 +22,7 @@ module.exports = function (router) {
    *
    * @apiSuccess {String} id app唯一标示
    * @apiSuccess {String} secret 认证秘钥
-   * @apiSuccess {String} simUser app系统模拟用户id，每一个app都有一个对应的模拟用户，用来给其他用户发送系统通知消息
+   * @apiSuccess {String} simUser app系统模拟用户refKey，每一个app都有一个对应的模拟用户，用来给其他用户发送系统通知消息
    * @apiSuccess {String} name app名称，全平台唯一
    * @apiSuccess {String} des app描述
    * @apiSuccess {Number} maxSessionCount] 每个用户拥有会话最大数(拥有会话指：用户属于会话的超级管理员，该会话的owner等于该用户的refkey)
@@ -35,7 +35,7 @@ module.exports = function (router) {
    */
 
   /**
-   * @api {post} /platform-api/app 更新App[平台管理员]
+   * @api {post} /platform-api/app 更新App[平台]
    * @apiName update App[admin]
    * @apiGroup app
    *

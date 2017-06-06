@@ -5,8 +5,8 @@ const sessionInfoSchema = new Schema({
   sessionId: { type: Schema.Types.ObjectId, required: true },
   refKey: { type: String, required: true },
   appId: { type: Schema.Types.ObjectId, required: true },
-  startMsgId: { type: Number, default: 0 },//会话进行查询时开始边界
-  endMsgId: Number,//会话进行查询时的结束边界
+  startMsgId: { type: Number, default: 0 },//查询会话消息时最小消息Id
+  endMsgId: Number,//查询会话消息时最大消息Id
   nickname: { type: String, trim: true, maxlength: 50 },//在该会话中的昵称（只有在会话消息列表，会话成员列表会显示该字段）
   background: { type: String, trim: true, maxlength: 200 },//该会话的背景图
   joinDate: { type: Date },//加入会话的时间
@@ -24,7 +24,7 @@ const sessionInfoSchema = new Schema({
     max: 1,
     default: 0
   },
-  clearDate: { type: Date },
+  clearDate: { type: Date },//用户主动清除会话时的时间
   outside: {//退出会话时该字段为1
     type: Number,
     min: 0,

@@ -5,7 +5,7 @@ const messageSchema = new Schema({
   //从0递增+1
   msgId: { type: Number, required: true, min: 1 },
   sessionId: { type: Schema.Types.ObjectId, required: true },
-  relevantSessionId: { type: Schema.Types.ObjectId },//相关会话，该消息因为由相关会话而产生
+  relevantSessionId: { type: Schema.Types.ObjectId },//相关会话ID，应用于审批流程
   relevantToken: { type: String },//关联操作ID
   relevantStatus: {//关联事件是否操作完成比如是否审批用户加入，用户是否同意加入
     type: Number,//1 未处理 2同意 3拒绝

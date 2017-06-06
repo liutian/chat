@@ -22,6 +22,21 @@ module.exports = function (router) {
    * @apiSampleRequest /server-api/user/create
    *
    * @apiSuccess {String} id 用户唯一标示
+   * @apiSuccess {String} appId 所属app的ID
+   * @apiSuccess {String} sysSessionId 每一个用户创建的时候都会创建一个系统会话，用于接收系统消息，包括审批流程
+   * @apiSuccess {Number} sim 是否是模拟用户，模拟用户用来发系统消息给普通用户
+   * @apiSuccess {String} refKey 第三方服务器用户系统唯一标示，如果是模拟用户对应值为：'simuser_' + appId
+   * @apiSuccess {String} nickname 用户昵称
+   * @apiSuccess {String} letterNickname 用户昵称首字母大写
+   * @apiSuccess {String} avator 用户头像
+   * @apiSuccess {Number} sex 用户性别 1男 2女 3其他
+   * @apiSuccess {[Number]} location 用户坐标数组，数组只有两项
+   * @apiSuccess {String} token 用户登录授权的校验码
+   * @apiSuccess {Number} tokenExpiry 用户登录授权的校验码有效期，单位小时
+   * @apiSuccess {Number} joinSessionAgree 被邀请加入会话是否需要同意
+   * @apiSuccess {Number} del 用户是否删除
+   * @apiSuccess {String} lock 用户是否锁定，锁定之后不能进行任何操作也不能登录
+   * @apiSuccess {String} des 用户个人描述
    *
    */
   router.post('/server-api/user/create', serverCreateUser);
@@ -75,6 +90,7 @@ module.exports = function (router) {
    * @apiParam {Number} [sex] 用户性别 1:男 2:女 3:其他
    * @apiParam {[Number]} [location] 用户地理位置
    * @apiParam {String} [des] 用户自己描述
+   * @apiParam {Number} [joinSessionAgree] 被邀请加入会话是否需要同意
    *
    * @apiSampleRequest /api/user
    *
@@ -88,6 +104,7 @@ module.exports = function (router) {
    *
    * @apiUse client_auth
    *
+   *
    * @apiParam {String} [nickname] 用户昵称
    * @apiParam {Number} [sex] 用户性别 1:男 2:女 3:其他
    * @apiParam {[Number]} [location] 用户地理位置
@@ -96,6 +113,7 @@ module.exports = function (router) {
    * @apiParam {Number} [lock] 用户地理位置
    * @apiParam {Number} [page] 分页页数
    * @apiParam {Number} [pageSize] 每一页显示数据量
+   * @apiParam {Number} [searchCount] 是否返回符合条件的总数据个数,可以在响应头的searchCount字段获取该值
    *
    * @apiSampleRequest /api/user
    *
@@ -135,5 +153,10 @@ async function auth(ctx, next) {
 async function findUser(ctx, next) {
   let data = ctx.request.query;
   data.appId = ctx.session.user.appId;
-  ctx.body = await userService.list(data);
+  let list = await userService.list(data);
+  if (+data.searchCount == 1) {
+    ctx.set('searchCount', list.pop());
+  }
+
+  ctx.body = list;
 }
