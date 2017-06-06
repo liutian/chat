@@ -298,7 +298,7 @@ async function listHistoryFn(data) {
       && session.latestMessage.createdAt.getTime() <= session.clearDate.getTime()))) continue;
 
     if (session.private == 1 && session.privateKey && !session.name) {
-      let otherId = session.privateKey.split('_').find(v => v == data.refKey);
+      let otherId = session.privateKey.split('::').find(v => v == data.refKey);
       if (session.otherRemark) {
         session.name = session.otherRemark;
       } else if (otherId) {
@@ -384,9 +384,9 @@ async function createFn(data) {
 
 function createPrivateKeyFn(refKey1, refKey2) {
   if (refKey1 > refKey2) {
-    return refKey1 + '_' + refKey2;
+    return refKey1 + '::' + refKey2;
   } else {
-    return refKey2 + '_' + refKey1;
+    return refKey2 + '::' + refKey1;
   }
 }
 
@@ -426,10 +426,20 @@ async function enterFn(data) {
     let sysMsg = await messageModal.findById(data.sysMsgId);
     if (!sysMsg) apiError.throw('sysMsg cannot find');
     if (!sysMsg.content || !util.isString(sysMsg.content)) apiError.throw('sysMsg content cannot be empty');
+    sysMsg = sysMsg.obj;
     sysMsg.content = JSON.parse(sysMsg.content);
     if (!sysMsg.content.fromRefKey) apiError.throw('sysMsg content.fromRefKey cannot find');
     let from = await userService.get(sysMsg.content.fromRefKey, data.appId);
     if (!from) apiError.throw('sysMsg from cannot find');
+
+    //校验会话和邀请是否合规
+    let session = await sessionModel.findOne({
+      _id: sysMsg.relevantSessionId,
+      appId: data.appId
+    }, '-latestMessage -joinQuestion');
+    if (!session) apiError.throw('session cannot find');
+    if (session.lock == 1) apiError.throw(1020);
+    if (session.del == 1) apiError.throw(1021);
 
     let goOn = await indirectEnter(data, app, from, sysMsg);
     if (goOn) {
@@ -458,7 +468,7 @@ async function indirectEnter(data, app, from, sysMsg) {
   }
 
   if (data.resolve == 1) {
-    data.members = [{ type: 'U', id: sysMsg.content.refKey }];
+    data.members = [{ type: 'U', id: sysMsg.content.refKey, ignoreAgree: true }];
     return true;
   }
 
@@ -584,7 +594,7 @@ async function directEnter(data, currUser, app, session) {
     } else if (session.joinStrategy == 5) {
       apiError.throw(1028);
     }
-    data.members = [{ type: 'U', id: currUser.refKey }];
+    data.members = [{ type: 'U', id: currUser.refKey, ignoreAgree: true }];
   }
 
   return true;
@@ -717,16 +727,23 @@ async function inviteAgree(app, from, members, session) {
   let noAgreeMembers = [];
   for (let i = 0; i < members.length; i++) {
     let member = members[i];
-    let user = await userService.get(member, app.id);
-    if (!user) apiError.throw(`user(refKey:${member}) cannot find`);
-    if (user.joinSessionAgree == 1 && member != from.refKey) {
+
+    let user = await userService.get(member.id, app.id);
+    if (!user) apiError.throw(`user(refKey:${member.id}) cannot find`);
+
+    if (member.ignoreAgree) {
+      noAgreeMembers.push(user);
+      continue;
+    }
+
+    if (user.joinSessionAgree == 1 && member.id != from.refKey) {
       //发送是否同意的通知消息
       //初始化新消息
       let message = {
         sessionId: user.sysSessionId,
         appId: app.id,
         from: app.simUser,
-        content: JSON.stringify({ refKey: member, fromRefKey: from.refKey }),
+        content: JSON.stringify({ refKey: member.id, fromRefKey: from.refKey }),
         type: 15,
         fromSys: 1,
         apnsName: app.apnsName,
@@ -787,7 +804,7 @@ async function parseMembersFn(members, maxMemberCount) {
     if (member.type == 'U') {
       if (!newMembers.includes(member.id)) {
         if (newMembers.length >= maxMemberCount) apiError.throw(1017);
-        newMembers.push(member.id);
+        newMembers.push(member);
       }
     } else if (member.type == 'S') {
       let sessionInfoList = await sessionInfoModel.find({
@@ -798,7 +815,7 @@ async function parseMembersFn(members, maxMemberCount) {
       sessionInfoList.forEach(function (value) {
         if (!newMembers.includes(value.refKey)) {
           if (newMembers.length >= maxMemberCount) apiError.throw(1017);
-          newMembers.push(value.refKey);
+          newMembers.push({ id: value.refKey });
         }
       })
     }

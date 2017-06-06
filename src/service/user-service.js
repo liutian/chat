@@ -13,6 +13,7 @@ const sessionService = require('./session-service');
 const userModel = mongoose.model('user');
 const sessionModel = mongoose.model('session');
 const sessionInfoModel = mongoose.model('sessionInfo');
+const refKeyReg = new RegExp('^\\w+$', 'i');
 
 exports.createUser = createUserFn;
 exports.updateUser = updateUserFn;
@@ -30,6 +31,7 @@ async function createUserFn(data) {
   if (!data.refKey) apiError.throw('refKey cannot be empty');
   if (!data.nickname) apiError.throw('nickname cannot be empty');
   if (!data.appId) apiError.throw('appId cannot be empty');
+  if (!refKeyReg.test(data.refKey)) apiError.throw('refKey Can only contain letters, Numbers, underscore');
 
   let app = await appService.get(data.appId);
 
@@ -72,7 +74,7 @@ async function createSysSessionFn(appId, refKey, simUser) {
     appId: appId,
     del: 0,
     joinDate: new Date(),
-    clearDate: null,
+    clearDate: new Date(),
     stick: 0,
     outside: 0
   }
