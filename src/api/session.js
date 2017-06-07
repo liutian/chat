@@ -129,7 +129,7 @@ module.exports = function (router) {
    */
 
   /**
-   * @api {post} /api/session/enter 同意被邀请加入会话[客户端]
+   * @api {post} /api/session/enter 用户同意或者拒绝被邀请加入会话[客户端]
    * @apiName agree enter session
    * @apiGroup session
    *
@@ -341,6 +341,7 @@ async function findSessionMember(ctx, next) {
   let data = ctx.request.query;
   data.appId = ctx.session.user.appId;
   data.id = ctx.params.id;
+  data.refKey = ctx.session.user.refKey;
   let list = await sessionService.memberList(data);
   if (+data.searchCount == 1) {
     ctx.set('searchCount', list.pop());

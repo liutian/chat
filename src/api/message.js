@@ -27,6 +27,7 @@ module.exports = function (router) {
    * @apiSuccess {String} relevantSessionId 相关会话ID，应用于审批流程
    * @apiSuccess {String} relevantToken //关联操作ID
    * @apiSuccess {String} relevantStatus 关联事件是否操作完成比如是否审批用户加入，用户是否同意加入 1 未处理 2同意 3拒绝
+   * @apiSuccess {String} relevantStatusUpdater 更新relevantStatus的操作者
    * @apiSuccess {Object} from 消息发送者refKey，参见用户接口
    * @apiSuccess {Object} content 消息数据
    * @apiSuccess {String} textContent 消息内容纯文本

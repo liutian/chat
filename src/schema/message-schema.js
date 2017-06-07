@@ -13,6 +13,7 @@ const messageSchema = new Schema({
     max: 3,
     default: 1
   },
+  relevantStatusUpdater: { type: String },//更新relevantStatus的操作者
   appId: { type: Schema.Types.ObjectId, required: true },
   //消息发送方
   from: { type: String, required: true },
