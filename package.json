@@ -14,11 +14,12 @@
     "ioredis": "2.5.0",
     "js-yaml": "3.8.3",
     "koa": "2.2.0",
-    "koa-bodyparser": "4.2.0",
+    "koa-body": "2.1.0",
     "koa-router": "7.1.1",
     "koa-session": "5.0.0",
     "log4js": "1.1.1",
     "mongoose": "4.9.6",
+    "request": "2.81.0",
     "yargs": "7.1.0"
   },
   "devDependencies": {

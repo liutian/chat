@@ -1,9 +1,16 @@
 const crypto = require('crypto');
 const util = require('util');
+const fs = require('fs');
+const path = require('path');
+
+const fsAccess = util.promisify(fs.access);
+const fsMkdir = util.promisify(fs.mkdir);
 
 exports.pick = pickFn;
 
 exports.random = randomFn;
+
+exports.mkdir = mkdirFn;
 
 
 /*------------------------------------分割线 -----------------------------*/
@@ -44,4 +51,15 @@ function randomFn(size) {
       }
     });
   });
+}
+
+
+async function mkdirFn(dirname) {
+  try {
+    await fsMkdir(dirname);
+  } catch (e) {
+    if (e.code != 'EEXIST') {
+      await mkdirFn(path.dirname(dirname));
+    }
+  }
 }

@@ -2,7 +2,7 @@ const fs = require('fs');
 const Koa = require('koa');
 const Router = require('koa-router');
 const session = require('koa-session');
-const bodyParser = require('koa-bodyparser');
+const koaBody = require('koa-body')({ multipart: true });
 const mongoose = require('mongoose');
 const util = require('util');
 
@@ -32,13 +32,13 @@ const sessionMiddleware = session({
   maxAge: config.cookie_session_expiry * 1000 * 60
 }, app);
 
-router.all('/api/*', corsFilter, sessionMiddleware, cert.client, bodyParser());
+router.all('/api/*', corsFilter, sessionMiddleware, cert.client, koaBody);
 
 // 第三方服务器认证
-router.all('/server-api/*', corsFilter, cert.server, bodyParser());
+router.all('/server-api/*', corsFilter, cert.server, koaBody);
 
 // 平台接口认证
-router.all('/platform-api/*', corsFilter, cert.platform, bodyParser());
+router.all('/platform-api/*', corsFilter, cert.platform, koaBody);
 
 // 加载所有接口
 fs.readdirSync(__dirname).forEach(function (filename) {

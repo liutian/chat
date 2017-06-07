@@ -1,4 +1,14 @@
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+const util = require('util');
+
 const messageService = require('../service/message-service');
+const _util = require('../util/util');
+const apiError = require('../util/api-error');
+const config = require('../config');
+
+const rename = util.promisify(fs.rename);
 
 
 module.exports = function (router) {
@@ -66,6 +76,22 @@ module.exports = function (router) {
    */
   router.get('/api/message', findMessage);
 
+
+  /**
+   * @api {post} /api/message/upload 上传文件
+   * @apiName upload file
+   * @apiGroup message
+   * @apiDescription 服务器返回上传后，以对象方式返回文件信息，对象键为上传时的name,值参见下列描述
+   *
+   * @apiUse client_auth
+   *
+   * @apiParam {Number} size 文件大小
+   * @apiParam {String} path 文件访问路径，相对服务器的路径
+   * @apiParam {String} name 文件名称
+   * @apiParam {String} type 文件类型
+   *
+   */
+  router.post('/api/message/upload', upload);
 }
 
 
@@ -87,3 +113,38 @@ async function findMessage(ctx, next) {
   ctx.request.query.appId = ctx.session.user.appId;
   ctx.body = await messageService.list(ctx.request.query);
 }
+
+async function upload(ctx, next) {
+  let filesObj = ctx.request.body.files;
+  if (!filesObj || Object.keys(filesObj).length <= 0) {
+    apiError.throw('At least one file ');
+  }
+
+  let date = new Date();
+  let dateStr = date.getFullYear() + '-' + date.getMonth() + '-' + date.getDate();
+  let hash = crypto.createHash('md5');
+  hash.update(dateStr);
+  let dateHash = hash.digest('hex');
+  hash = crypto.createHash('md5');
+  hash.update(ctx.get('RefKey'));
+  let refKeyHash = hash.digest('hex');
+
+  let fileInfoList = [];
+  let filesObjKeys = Object.keys(filesObj);
+  for (let i = 0; i < filesObjKeys.length; i++) {
+    let fileInfo = filesObj[filesObjKeys[i]];
+    let random = await _util.random(5);
+    let pathArr = [config.upload_dir, ctx.get('AppId'), dateHash, refKeyHash, random];
+    let filePath = path.join.apply(null, pathArr);
+
+    await _util.mkdir(path.dirname(filePath));
+    await rename(fileInfo.path, filePath);
+
+    fileInfoList.push(Object.assign(fileInfo, {
+      path: config.upload_file_prefix + filePath.replace(config.upload_dir, '')
+    }));
+  }
+
+  ctx.body = fileInfoList;
+}
+
