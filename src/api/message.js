@@ -70,8 +70,6 @@ module.exports = function (router) {
    * @apiParam {Number} [contentType]  消息内容类型
    * @apiParam {Number} [searchAll] 是否查询所有消息，默认只查询有限的消息 (>=startMsgId或者<=endMsgId并且没有删除)
    *
-   * @apiSampleRequest /api/message
-   *
    * @apiSuccess {[Object]} result 请求返回参数，参考发送消息接口
    */
   router.get('/api/message', findMessage);
