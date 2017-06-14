@@ -34,8 +34,8 @@ module.exports = function (router) {
    * @apiSuccess {Number} type 会话类型 1:普通用户会话 2:系统级会话
    * @apiSuccess {Number} category 会话类别比如运动，读书，旅游，美食，具体值由第三方服务器维护
    * @apiSuccess {Number} publicSearch 是否可以公开搜索到
-   * @apiSuccess {Number} private 是否是私聊会话
-   * @apiSuccess {Number} privateKey 保存私聊会话成员的refKey，降序排列以 '_' 分割
+   * @apiSuccess {Number} secret 是否是私聊会话
+   * @apiSuccess {Number} secretKey 保存私聊会话成员的refKey，降序排列以 '_' 分割
    * @apiSuccess {Number} anonymously 是否可以发送匿名消息
    * @apiSuccess {Number} joinStrategy 加入方式 1自由进入 2进入时需要审核 3需要回答问题 4需要回答问题并由管理员审核 5拒绝进入
    * @apiSuccess {Number} inviteStrategy 普通成员邀请他人进入会话的方式 1无需审核直接邀请进入 2需要管理员审核 3人数达到移动数量才进行审核
@@ -238,7 +238,7 @@ module.exports = function (router) {
    * @apiParam {Number} [type] 会话类型
    * @apiParam {Number} [category] 会话类别
    * @apiParam {Number} [publicSearch] 会话是否可以公开搜索到
-   * @apiParam {Number} [private] 私聊类型会话
+   * @apiParam {Number} [secret] 私聊类型会话
    * @apiParam {Number} [name] 会话名称模糊查询
    * @apiParam {Number} [joinStrategy] 会话加入策略
    * @apiParam {Number} [inviteStrategy] 会话邀请策略

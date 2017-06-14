@@ -37,7 +37,7 @@ exports.updateSessionInfo = updateSessionInfoFn;
 //查询app下所有会话
 exports.list = listFn;
 
-exports.createPrivateKey = createPrivateKeyFn;
+exports.createSecretKey = createSecretKeyFn;
 
 exports.memberList = memberListFn;
 
@@ -108,21 +108,21 @@ async function _exit(members, session, app, user) {
     outside: 0
   });
 
-  let private = 0;
-  let privateKey = null;
+  let secret = 0;
+  let secretKey = null;
   if (memberCount == 2) {
-    private = 1;
+    secret = 1;
     let sessionInfoList = await sessionInfoModel.find({
       appId: app.id,
       sessionId: session.id,
       outside: 0
     }, 'refKey');
-    privateKey = createPrivateKeyFn(sessionInfoList[0].refKey, sessionInfoList[1].refKey);
+    secretKey = createSecretKeyFn(sessionInfoList[0].refKey, sessionInfoList[1].refKey);
   }
 
   await sessionModel.findByIdAndUpdate(session.id, {
-    private: private,
-    privateKey: privateKey,
+    secret: secret,
+    secretKey: secretKey,
     memberCount: memberCount
   });
 
@@ -301,8 +301,8 @@ async function listHistoryFn(data) {
     if (data.searchAll != 1 && session.clearDate && (!session.latestMessage || (session.latestMessage && session.latestMessage.createdAt
       && session.latestMessage.createdAt.getTime() <= session.clearDate.getTime()))) continue;
 
-    if (session.private == 1 && session.privateKey && !session.name) {
-      let otherId = session.privateKey.split('::').find(v => v == data.refKey);
+    if (session.secret == 1 && session.secretKey && !session.name) {
+      let otherId = session.secretKey.split('::').find(v => v == data.refKey);
       if (session.otherRemark) {
         session.name = session.otherRemark;
       } else if (otherId) {
@@ -325,7 +325,7 @@ async function listHistoryFn(data) {
 
 //创建会话
 async function createFn(data) {
-  let pickList = '** -members -private -msgMaxCount -latestMessage -owner -admins -del -lock';
+  let pickList = '** -members -secret -msgMaxCount -latestMessage -owner -admins -del -lock';
   let oldData = data;
   data = _util.pick(data, pickList);
 
@@ -345,16 +345,16 @@ async function createFn(data) {
   if (app.del == 1) apiError.throw(1027);
 
 
-  let privateSession = Array.isArray(oldData.members) && oldData.members.length == 1
+  let secretSession = Array.isArray(oldData.members) && oldData.members.length == 1
     && oldData.members[0].type == 'U' && oldData.members[0].id != data.founder;
   //检查如果存在当前用户和members[0]在一个会话，而且该会话只有这两个人则直接返回该会话
-  if (privateSession) {
+  if (secretSession) {
     let otherId = oldData.members[0].id;
-    let privateKey = createPrivateKeyFn(otherId, data.founder);
+    let secretKey = createSecretKeyFn(otherId, data.founder);
     let _session = await sessionModel.findOne({
       appId: data.appId,
-      private: 1,
-      privateKey: privateKey
+      secret: 1,
+      secretKey: secretKey
     }, '-latestMessage');
     //如果存在私聊会话则直接返回会话信息
     if (_session) {
@@ -386,7 +386,7 @@ async function createFn(data) {
   return newSession.obj;
 }
 
-function createPrivateKeyFn(refKey1, refKey2) {
+function createSecretKeyFn(refKey1, refKey2) {
   if (refKey1 > refKey2) {
     return refKey1 + '::' + refKey2;
   } else {
@@ -699,19 +699,19 @@ async function _enter(app, session, members, from, historyView) {
 
 async function updateSessionForMemberChange(app, session) {
   let limit = 9;
-  //更新private字段,同时检查如果没有name，则根据members更新name
+  //更新secret字段,同时检查如果没有name，则根据members更新name
   let sessionInfoList = await sessionInfoModel.find({
     appId: app.id,
     sessionId: session.id,
     outside: 0
   }, 'refKey nickname').limit(limit);
 
-  //如果是私聊则直接更新 private privateKey memberCount 无需计算
+  //如果是私聊则直接更新 secret secretKey memberCount 无需计算
   if (sessionInfoList.length == 2) {
-    let privateKey = createPrivateKeyFn(sessionInfoList[0].refKey, sessionInfoList[1].refKey);
+    let secretKey = createSecretKeyFn(sessionInfoList[0].refKey, sessionInfoList[1].refKey);
     await sessionModel.findByIdAndUpdate(session.id, {
-      private: 1,
-      privateKey: privateKey,
+      secret: 1,
+      secretKey: secretKey,
       memberCount: 2
     }, { runValidators: true });
     return;
@@ -738,13 +738,13 @@ async function updateSessionForMemberChange(app, session) {
       }
     }
     await sessionModel.findByIdAndUpdate(session.id, {
-      private: 0,
+      secret: 0,
       name: otherNicknameList.join('、').substr(0, 100),
       memberCount: memberCount
     }, { runValidators: true });
-  } else if (session.private == 1) {
+  } else if (session.secret == 1) {
     await sessionModel.findByIdAndUpdate(session.id, {
-      private: 0,
+      secret: 0,
       memberCount: memberCount
     }, { runValidators: true });
   } else {
@@ -914,7 +914,7 @@ async function createSysMsg(data, msg, pushObj) {
 
 async function listFn(data) {
   let oldData = data;
-  data = _util.pick(data, 'appId type category publicSearch private name joinStrategy inviteStrategy founder owner mute del lock');
+  data = _util.pick(data, 'appId type category publicSearch secret name joinStrategy inviteStrategy founder owner mute del lock');
   if (!oldData.appId) apiError.throw('appId cannot be empty');
 
   let limit = +oldData.pageSize || 10;

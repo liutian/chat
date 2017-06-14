@@ -36,7 +36,7 @@ async function listFn(data) {
   });
   if (!sessionInfo) apiError.throw('you are not session member');
 
-  let session = await sessionModel.findById(data.sessionId, 'private');
+  let session = await sessionModel.findById(data.sessionId, 'secret');
   if (!session) apiError.throw('session cannot find');
 
   let limit = +data.pageSize || 10;
@@ -91,7 +91,7 @@ async function listFn(data) {
 
     if (msg.anonymously == 1) {
       msg.from.nickname = '匿名';
-    } else if (session.private == 1 && msg.from.refKey != data.refKey && sessionInfo.otherRemark) {
+    } else if (session.secret == 1 && msg.from.refKey != data.refKey && sessionInfo.otherRemark) {
       msg.from.nickname = sessionInfo.otherRemark;
     }
     returnMessageList.push(msg);

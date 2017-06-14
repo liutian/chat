@@ -23,13 +23,13 @@ const sessionSchema = new Schema({
     max: 10000
   },
   publicSearch: { type: Number, min: 0, max: 1, default: 1 },//是否可以公开搜索到
-  private: {//是否是私聊会话
+  secret: {//是否是私聊会话
     type: Number,
     min: 0,
     max: 1,
     default: 0
   },
-  privateKey: { type: String },//保存私聊会话成员的refKey，降序排列以 '-' 分割
+  secretKey: { type: String },//保存私聊会话成员的refKey，降序排列以 '-' 分割
   //群聊时需要,私聊会话为对方名称
   name: { type: String, trim: true, maxlength: 100 },
   letterName: { type: String, lowercase: true, trim: true, maxlength: 100 },

@@ -48,7 +48,7 @@ async function createUserFn(data) {
 }
 
 async function createSysSessionFn(appId, refKey, simUser) {
-  let privateKey = sessionService.createPrivateKey(refKey, simUser);
+  let secretKey = sessionService.createSecretKey(refKey, simUser);
 
   //初始化数据
   let sysSession = {
@@ -56,8 +56,8 @@ async function createSysSessionFn(appId, refKey, simUser) {
     type: 2,
     name: '系统会话',
     publicSearch: 0,
-    private: 1,
-    privateKey: privateKey,
+    secret: 1,
+    secretKey: secretKey,
     owner: simUser,
     founder: simUser,
     admins: [simUser],
