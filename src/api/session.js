@@ -277,7 +277,7 @@ module.exports = function (router) {
 
 
   /**
-   * @api {get} /api/session/about-me 查询关于我的会话[客户端]
+   * @api {get} /api/session-me 查询关于我的会话[客户端]
    * @apiName search about me session member list
    * @apiGroup session
    *
@@ -285,13 +285,15 @@ module.exports = function (router) {
    *
    * @apiParam {Number} [page] 分页页数
    * @apiParam {Number} [pageSize] 每一页显示数据量
+   * @apiParam {Number} [sessionType] 会话类型 1: 普通会话 2： 系统会话
+   * @apiParam {Number} [secret] 是否是私密会话
    * @apiParam {Number} [searchCount] 是否返回符合条件的总数据个数,可以在响应头的searchCount字段获取该值
    *
    * @apiSampleRequest /api/session/about-me
    *
    * @apiSuccess {[Object]} result 请求返回参数，参考创建会话接口
    */
-  router.get('/api/session/about-me', findSessionAboutMe);
+  router.get('/api/session-me', findSessionAboutMe);
 }
 
 

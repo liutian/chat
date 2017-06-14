@@ -13,6 +13,13 @@ const sessionInfoSchema = new Schema({
   speakDate: { type: Date },//最后一次发消息，已用户身份生成的消息不作为真正的发消息
   otherRemark: { type: String, trim: true, maxlength: 50 },//私聊时用户可以备注对方,该字段有对方修改自己不能修改
   secret: { type: Number, min: 0, max: 1, default: 0 },//是否是私聊会话
+  sessionType: {
+    type: Number,//1普通会话 2系统会话
+    min: 1,
+    max: 2,
+    default: 1,
+    required: true
+  },
   stick: { //置顶
     type: Number,
     min: 0,
