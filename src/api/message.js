@@ -69,6 +69,7 @@ module.exports = function (router) {
    * @apiParam {Number} [type]  消息类型
    * @apiParam {Number} [contentType]  消息内容类型
    * @apiParam {Number} [searchAll] 是否查询所有消息，默认只查询有限的消息 (>=startMsgId或者<=endMsgId并且没有删除)
+   * @apiParam {Number} [searchCount] 是否返回符合条件的总数据个数,可以在响应头的searchCount字段获取该值
    *
    * @apiSuccess {[Object]} result 请求返回参数，参考发送消息接口
    */
@@ -107,9 +108,15 @@ async function saveMessage(ctx, next) {
 }
 
 async function findMessage(ctx, next) {
-  ctx.request.query.refKey = ctx.session.user.refKey;
-  ctx.request.query.appId = ctx.session.user.appId;
-  ctx.body = await messageService.list(ctx.request.query);
+  let data = ctx.request.query;
+  data.refKey = ctx.session.user.refKey;
+  data.appId = ctx.session.user.appId;
+  let list = await messageService.list(data);
+  if (+data.searchCount == 1) {
+    ctx.set('searchCount', list.pop());
+  }
+
+  ctx.body = list;
 }
 
 async function upload(ctx, next) {

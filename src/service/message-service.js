@@ -21,7 +21,7 @@ exports.storeMessage = storeMessageFn;
 //************************************************************ */
 
 async function listFn(data) {
-  data = _util.pick(data, 'refKey appId sessionId page pageSize latestMessageId type contentType searchAll');
+  data = _util.pick(data, 'refKey appId sessionId page pageSize latestMessageId type contentType searchAll searchCount');
   //基本数据校验
   if (!data.refKey) apiError.throw('refKey cannot be empty');
   if (!data.appId) apiError.throw('appId cannot be empty');
@@ -95,6 +95,11 @@ async function listFn(data) {
       msg.from.nickname = sessionInfo.otherRemark;
     }
     returnMessageList.push(msg);
+  }
+
+  if (+data.searchCount == 1) {
+    let searchCount = await messageModal.count(query);
+    returnMessageList.push(searchCount);
   }
 
   return returnMessageList;
