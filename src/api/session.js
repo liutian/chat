@@ -220,6 +220,7 @@ module.exports = function (router) {
    * @apiParam {Number} [stick] 会话置顶
    * @apiParam {Number} [quiet] 会话推送免打扰
    * @apiParam {Number} [remove] 从历史会话中清除
+   * @apiParam {Number} [clearMsg] 是否清楚会话内的消息
    * @apiParam {String} [otherRemark] 私聊时用户可以备注对方
    *
    * @apiSampleRequest /api/session-info

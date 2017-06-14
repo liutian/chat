@@ -177,6 +177,11 @@ async function updateSessionInfoFn(data) {
   if (!data.sessionId) apiError.throw('sessionId cannot be empty');
   data = _util.pick(data, 'nickname background stick quiet otherRemark');
 
+  if (oldData.clearMsg == 1) {
+    let session = await sessionModel.findById(oldData.sessionId, 'msgMaxCount');
+    data.startMsgId = session.msgMaxCount + 1;
+  }
+
   if (oldData.remove == 1) data.clearDate = new Date();
   await sessionInfoModel.findOneAndUpdate({
     sessionId: oldData.sessionId,
