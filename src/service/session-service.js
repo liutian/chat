@@ -37,9 +37,14 @@ exports.updateSessionInfo = updateSessionInfoFn;
 //查询app下所有会话
 exports.list = listFn;
 
+//创建私密会话key
 exports.createSecretKey = createSecretKeyFn;
 
+//查询会话下的成员列表
 exports.memberList = memberListFn;
+
+//查询关于我的会话
+exports.listAboutMe = listAboutMeFn;
 
 //************************************************************ */
 
@@ -119,6 +124,12 @@ async function _exit(members, session, app, user) {
     }, 'refKey');
     secretKey = createSecretKeyFn(sessionInfoList[0].refKey, sessionInfoList[1].refKey);
   }
+
+  await sessionInfoModel.update({
+    appId: app.id,
+    sessionId: session.id,
+    outside: 0
+  }, { secret: memberCount > 2 ? 1 : 0 }, { multi: true });
 
   await sessionModel.findByIdAndUpdate(session.id, {
     secret: secret,
@@ -726,6 +737,12 @@ async function updateSessionForMemberChange(app, session) {
     });
   }
 
+  await sessionInfoModel.update({
+    appId: app.id,
+    sessionId: session.id,
+    outside: 0
+  }, { secret: memberCount > 2 ? 1 : 0 }, { multi: true });
+
   if (!session.name) {
     let otherNicknameList = [];
     for (let i = 0; i < sessionInfoList.length; i++) {
@@ -985,3 +1002,28 @@ async function memberListFn(data) {
   return returnList;
 }
 
+async function listAboutMeFn(data) {
+  let oldData = data;
+  data = _util.pick(data, 'refKey appId secret stick quiet');
+  if (!data.refKey) apiError.throw('refKey cannot be empty');
+  if (!data.appId) apiError.throw('appId cannot be empty');
+
+  let limit = +oldData.pageSize || 10;
+  let skip = ((+oldData.page || 1) - 1) * limit;
+  data.outside = 0;
+  let sessionInfoList = await sessionInfoModel.find(data, 'sessionId').limit(limit).skip(skip);
+
+  let returnList = [];
+  for (let i = 0; i < sessionInfoList.length; i++) {
+    let sessionId = sessionInfoList[i].sessionId.toString();
+    let session = await sessionModel.findById(sessionId);
+    returnList.push(session.obj);
+  }
+
+  if (+oldData.searchCount == 1) {
+    let searchCount = await sessionInfoModel.count(data);
+    returnList.push(searchCount);
+  }
+
+  return returnList;
+}

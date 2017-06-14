@@ -76,7 +76,8 @@ async function createSysSessionFn(appId, refKey, simUser) {
     joinDate: new Date(),
     clearDate: new Date(),
     stick: 0,
-    outside: 0
+    outside: 0,
+    secret: 1
   }
 
   await sessionInfoModel.create(sessionInfo);

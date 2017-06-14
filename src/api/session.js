@@ -274,6 +274,24 @@ module.exports = function (router) {
    * @apiSuccess {[Object]} result 请求返回参数，参考创建用户接口
    */
   router.get('/api/session/:id/member', findSessionMember);
+
+
+  /**
+   * @api {get} /api/session/about-me 查询关于我的会话[客户端]
+   * @apiName search about me session member list
+   * @apiGroup session
+   *
+   * @apiUse client_auth
+   *
+   * @apiParam {Number} [page] 分页页数
+   * @apiParam {Number} [pageSize] 每一页显示数据量
+   * @apiParam {Number} [searchCount] 是否返回符合条件的总数据个数,可以在响应头的searchCount字段获取该值
+   *
+   * @apiSampleRequest /api/session/about-me
+   *
+   * @apiSuccess {[Object]} result 请求返回参数，参考创建会话接口
+   */
+  router.get('/api/session/about-me', findSessionAboutMe);
 }
 
 
@@ -350,4 +368,16 @@ async function findSessionMember(ctx, next) {
   ctx.body = list;
 }
 
+
+async function findSessionAboutMe(ctx, next) {
+  let data = ctx.request.query;
+  data.appId = ctx.session.user.appId;
+  data.refKey = ctx.session.user.refKey;
+  let list = await sessionService.listAboutMe(data);
+  if (+data.searchCount == 1) {
+    ctx.set('searchCount', list.pop());
+  }
+
+  ctx.body = list;
+}
 
