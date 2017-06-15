@@ -24,7 +24,7 @@ function pushFn(data, leaveMessage) {
   let options = {
     url: config.push_url,
     method: 'post',
-    header: {
+    headers: {
       Authorization: data.pushAuth
     },
     json: true

@@ -10,6 +10,7 @@ const appService = require('./app-service');
 const apiError = require('../util/api-error');
 const _util = require('../util/util');
 const config = require('../config');
+const logger = require('log4js').getLogger('message-service');
 
 
 exports.sendMessage = sendMessageFn;
@@ -181,9 +182,13 @@ async function storeMessageFn(msg, pushObj) {
 
   //推送消息
   pushService.push(pushObj).then(function () {
-    messageModal.findByIdAndUpdate(msg.id, { pushResult: 'ok' });
+    messageModal.findByIdAndUpdate(newMsg.id, { pushResult: 'ok' }, function (err) {
+      if (err) logger.error(`store message:${newMsg.id} push ok result fail `);
+    });
   }).catch(function (err) {
-    messageModal.findByIdAndUpdate(msg.id, { pushResult: err });
+    messageModal.findByIdAndUpdate(newMsg.id, { pushResult: err }, function (err) {
+      if (err) logger.error('store message:${newMsg.id} push err result fail');
+    });
   });
 
   return newMsg;
