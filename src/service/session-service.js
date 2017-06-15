@@ -347,14 +347,6 @@ async function createFn(data) {
     let otherId = oldData.members[0].id;
     let secretKey = createSecretKeyFn(otherId, data.founder);
 
-    //如果secret为空则服务器自己判断
-    if (!_util.isNumber(data.secret) || data.secret == 1) {
-      data.secret = 1;
-      data.secretKey = secretKey;
-    } else {
-      data.secret = 0;
-    }
-
     //检查如果存在当前用户和members[0]在一个会话，而且该会话只有这两个人则直接返回该会话
     let _session = await sessionModel.findOne({
       appId: data.appId,
@@ -363,6 +355,14 @@ async function createFn(data) {
     }, '-latestMessage');
     if (_session) {
       return _session.obj;
+    }
+
+    //如果secret为空则服务器自己判断
+    if (!_util.isNumber(data.secret) || data.secret == 1) {
+      data.secret = 1;
+      data.secretKey = secretKey;
+    } else {
+      data.secret = 0;
     }
   } else {
     data.secret = 0;
