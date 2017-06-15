@@ -170,12 +170,21 @@ async function syncUserToRedis(user) {
 
 async function listFn(data) {
   let oldData = data;
-  data = _util.pick(data, 'nickname sex del lock appId');
+  data = _util.pick(data, 'nickname sex del lock appId letterNickname name');
   if (!data.appId) apiError.throw('appId cannot be empty');
 
   let limit = +oldData.pageSize || 10;
   let skip = ((+oldData.page || 1) - 1) * limit;
   if (data.nickname) data.nickname = new RegExp(data.nickname, 'i');
+  if (data.letterNickname) data.letterNickname = new RegExp(data.letterNickname, 'i');
+  if (data.name) {
+    data.$or = [
+      { nickname: new RegExp(data.nickname, 'i') },
+      { letterNickname: new RegExp(data.letterNickname, 'i') }
+    ];
+    delete data.nickname;
+    delete data.letterNickname;
+  }
   data.sim = 0;
   let userList = await userModel.find(data).limit(limit).skip(skip);
 

@@ -106,6 +106,8 @@ module.exports = function (router) {
    *
    *
    * @apiParam {String} [nickname] 用户昵称
+   * @apiParam {String} [letterNickname] 用户昵称首字母大写
+   * @apiParam {String} [name] 用户昵称或者首字母大写复合查询
    * @apiParam {Number} [sex] 用户性别 1:男 2:女 3:其他
    * @apiParam {[Number]} [location] 用户地理位置
    * @apiParam {Number} [locationRadius] 搜索半径
