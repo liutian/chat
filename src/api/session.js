@@ -17,6 +17,7 @@ module.exports = function (router) {
    * @apiParam {Number} [maxMemberCount] 会话最大成员数
    * @apiParam {Number} [mute] 是否禁言
    * @apiParam {Number} [category] 会话类型，具体指有第三方服务器维护，暂时预留
+   * @apiParam {Number} [secret] 是否是私密会话，如果是私密会话则必须有members字段
    * @apiParam {Number} [publicSearch] 是否可以公开搜索到
    * @apiParam {Number} [joinStrategy] 加入方式 1自由进入 2进入时需要审核 3需要回答问题 4需要回答问题并由管理员审核 5拒绝进入
    * @apiParam {Number} [inviteStrategy] 普通成员邀请他人进入会话的方式 1无需审核直接邀请进入 2需要管理员审核 3人数达到移动数量才进行审核

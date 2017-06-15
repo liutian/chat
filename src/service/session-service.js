@@ -113,27 +113,7 @@ async function _exit(members, session, app, user) {
     outside: 0
   });
 
-  let secret = 0;
-  let secretKey = null;
-  if (memberCount == 2) {
-    secret = 1;
-    let sessionInfoList = await sessionInfoModel.find({
-      appId: app.id,
-      sessionId: session.id,
-      outside: 0
-    }, 'refKey');
-    secretKey = createSecretKeyFn(sessionInfoList[0].refKey, sessionInfoList[1].refKey);
-  }
-
-  await sessionInfoModel.update({
-    appId: app.id,
-    sessionId: session.id,
-    outside: 0
-  }, { secret: memberCount > 2 ? 1 : 0 }, { multi: true });
-
   await sessionModel.findByIdAndUpdate(session.id, {
-    secret: secret,
-    secretKey: secretKey,
     memberCount: memberCount
   });
 
@@ -341,7 +321,7 @@ async function listHistoryFn(data) {
 
 //创建会话
 async function createFn(data) {
-  let pickList = '** -members -secret -msgMaxCount -latestMessage -owner -admins -del -lock';
+  let pickList = '** -members -msgMaxCount -latestMessage -owner -admins -del -lock';
   let oldData = data;
   data = _util.pick(data, pickList);
 
@@ -363,19 +343,29 @@ async function createFn(data) {
 
   let secretSession = Array.isArray(oldData.members) && oldData.members.length == 1
     && oldData.members[0].type == 'U' && oldData.members[0].id != data.founder;
-  //检查如果存在当前用户和members[0]在一个会话，而且该会话只有这两个人则直接返回该会话
   if (secretSession) {
     let otherId = oldData.members[0].id;
     let secretKey = createSecretKeyFn(otherId, data.founder);
+
+    //如果secret为空则服务器自己判断
+    if (!_util.isNumber(data.secret) || data.secret == 1) {
+      data.secret = 1;
+      data.secretKey = secretKey;
+    } else {
+      data.secret = 0;
+    }
+
+    //检查如果存在当前用户和members[0]在一个会话，而且该会话只有这两个人则直接返回该会话
     let _session = await sessionModel.findOne({
       appId: data.appId,
       secret: 1,
       secretKey: secretKey
     }, '-latestMessage');
-    //如果存在私聊会话则直接返回会话信息
     if (_session) {
       return _session.obj;
     }
+  } else {
+    data.secret = 0;
   }
 
   //校验创建会话是否合规,单个用户同时拥有的会话总数是有限的
@@ -387,6 +377,7 @@ async function createFn(data) {
   data.owner = data.founder;
   data.admins = [];//默认创建时只有一个管理员
   data.letterName = data.name && letter(data.name)[0];
+
 
   //存储会话
   let newSession = await sessionModel.create(data);
@@ -714,41 +705,19 @@ async function _enter(app, session, members, from, historyView) {
 }
 
 async function updateSessionForMemberChange(app, session) {
-  let limit = 9;
-  //更新secret字段,同时检查如果没有name，则根据members更新name
-  let sessionInfoList = await sessionInfoModel.find({
+  let memberCount = await sessionInfoModel.count({
     appId: app.id,
     sessionId: session.id,
     outside: 0
-  }, 'refKey nickname').limit(limit);
+  });
 
-  //如果是私聊则直接更新 secret secretKey memberCount 无需计算
-  if (sessionInfoList.length == 2) {
-    let secretKey = createSecretKeyFn(sessionInfoList[0].refKey, sessionInfoList[1].refKey);
-    await sessionModel.findByIdAndUpdate(session.id, {
-      secret: 1,
-      secretKey: secretKey,
-      memberCount: 2
-    }, { runValidators: true });
-    return;
-  }
-
-  let memberCount = sessionInfoList.length;
-  if (memberCount == limit) {
-    memberCount = await sessionInfoModel.count({
+  if (!session.name && session.secret != 1) {
+    let sessionInfoList = await sessionInfoModel.find({
       appId: app.id,
       sessionId: session.id,
       outside: 0
-    });
-  }
+    }, 'refKey nickname').limit(5);
 
-  await sessionInfoModel.update({
-    appId: app.id,
-    sessionId: session.id,
-    outside: 0
-  }, { secret: memberCount > 2 ? 1 : 0 }, { multi: true });
-
-  if (!session.name) {
     let otherNicknameList = [];
     for (let i = 0; i < sessionInfoList.length; i++) {
       let sessionInfo = sessionInfoList[i];
@@ -760,13 +729,7 @@ async function updateSessionForMemberChange(app, session) {
       }
     }
     await sessionModel.findByIdAndUpdate(session.id, {
-      secret: 0,
       name: otherNicknameList.join('、').substr(0, 100),
-      memberCount: memberCount
-    }, { runValidators: true });
-  } else if (session.secret == 1) {
-    await sessionModel.findByIdAndUpdate(session.id, {
-      secret: 0,
       memberCount: memberCount
     }, { runValidators: true });
   } else {
