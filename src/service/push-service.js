@@ -22,7 +22,7 @@ function pushFn(data, leaveMessage) {
     apiError.throw('推送参数错误');
   }
   let options = {
-    url: config.push_url,
+    url: config.push_url + '/api/auth/push',
     method: 'post',
     headers: {
       Authorization: data.pushAuth

@@ -147,6 +147,8 @@ async function _exit(members, session, app, user) {
     apnsName: app.apnsName,
     leaveMessage: 1
   });
+
+  _transferMember(app.pushAuth, members, session.id, 'leave');
 }
 
 async function updateSessionInfoFn(data) {
@@ -389,6 +391,8 @@ async function createFn(data) {
   if (oldData.members && oldData.members.length > 0) {
     await _enter(app, newSession, oldData.members, founder, 1);
   }
+
+  _transferMember(app.pushAuth, [founder.refKey], newSession.id, 'enter');
 
   return newSession.obj;
 }
@@ -702,6 +706,7 @@ async function _enter(app, session, members, from, historyView) {
     leaveMessage: 1
   });
 
+  _transferMember(app.pushAuth, noAgreeMembers.map(v => v.refKey), session.id, 'enter');
 }
 
 async function updateSessionForMemberChange(app, session) {
@@ -994,4 +999,43 @@ async function listAboutMeFn(data) {
   }
 
   return returnList;
+}
+
+
+function _transferMember(pushAuth, members, session, type) {
+  if (!pushAuth || !members || members.length <= 0 || !session || !type) {
+    apiError.throw('加入/踢人参数错误');
+  }
+
+  let options = {
+    url: config.push_url + '/api/auth/transfer',
+    method: 'post',
+    headers: {
+      Authorization: pushAuth
+    },
+    json: true
+  };
+
+  options.body = {
+    sourceRooms: members.map(function (v) {
+      return 'user_' + v;
+    }),
+    targetRoom: session,
+    type: type
+  };
+
+  return new Promise(function (resolve, reject) {
+    request(options, function (err, response, body) {
+      if (err) {
+        logger.error('transfer members error: ' + err);
+        reject(err);
+      } else if (response.statusCode == 200) {
+        resolve();
+      } else {
+        let err = new Error('statusCode ' + response.statusCode);
+        logger.error('transfer members :' + err);
+        reject(err);
+      }
+    });
+  })
 }

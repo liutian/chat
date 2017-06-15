@@ -24,7 +24,7 @@ default: &default
   redis_app_prefix: app_
   redis_user_prefix: user_
 
-  push_url: http://192.168.0.108:56789/api/auth/push
+  push_url: http://192.168.0.108:56789
   push_apns_name: default
 
   upload_dir: /Users/liuss/workspance/work/nodejs/upload
