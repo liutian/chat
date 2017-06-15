@@ -169,15 +169,23 @@ async function sendMessageFn(data) {
 
 
 async function storeMessageFn(msg, pushObj) {
-  let newSession = await sessionModel.findByIdAndUpdate(msg.sessionId, {
+  let updater = {
     $inc: { msgMaxCount: 1 },
     $set: {
       latestMessage: msg
     }
-  }, { new: true, runValidators: true });
+  }
+  if (msg.fromSys != 1) {
+    updater.$inc.messageMaxCount = 1;
+  }
+  let newSession = await sessionModel.findByIdAndUpdate(msg.sessionId, updater, {
+    new: true, runValidators: true
+  });
 
   //存储数据
   msg.msgId = newSession.msgMaxCount;
+  msg.messageId = newSession.messageMaxCount;
+  msg.sessionSecret = newSession.secret;
   let newMsg = await messageModal.create(msg);
 
   //推送消息

@@ -2,9 +2,15 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const messageSchema = new Schema({
-  //从0递增+1
-  msgId: { type: Number, required: true, min: 1 },
+  msgId: { type: Number, required: true, min: 1 },//从0递增+1 对应会话中的msgMaxCount
+  messageId: { type: Number, required: true, min: 1 },//从0递增+1 对应会话中的messageMaxCount 有可能出现多个消息messageId一样的情况
   sessionId: { type: Schema.Types.ObjectId, required: true },
+  sessionSecret: {//是否是私聊会话
+    type: Number,
+    min: 0,
+    max: 1,
+    default: 0
+  },
   relevantSessionId: { type: Schema.Types.ObjectId },//相关会话ID，应用于审批流程
   relevantToken: { type: String },//关联操作ID
   relevantStatus: {//关联事件是否操作完成比如是否审批用户加入，用户是否同意加入

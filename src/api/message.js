@@ -32,7 +32,9 @@ module.exports = function (router) {
    * @apiSampleRequest /api/message
    *
    * @apiSuccess {Number} msgId 消息id,数值类型递增
+   * @apiSuccess {Number} messageId 用户发出的消息的ID，如果当前消息是系统消息，该字段为会话中最后的messageId
    * @apiSuccess {String} sessionId 会话ID
+   * @apiSuccess {Number} sessionSecret 当前消息是否是私密会话中的消息
    * @apiSuccess {String} appId 会话所属app
    * @apiSuccess {String} relevantSessionId 相关会话ID，应用于审批流程
    * @apiSuccess {String} relevantToken //关联操作ID

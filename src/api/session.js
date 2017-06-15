@@ -43,6 +43,7 @@ module.exports = function (router) {
    * @apiSuccess {String} founder 会话创建者,不代表可以管理会话只有会话拥有者和管理员可以管理会话，创建会话时同时是创建者也是拥有者
    * @apiSuccess {Number} maxMemberCount 限制会话最大成员数
    * @apiSuccess {Number} msgMaxCount 会话中的总消息数
+   * @apiSuccess {Number} msgMaxCount 会话中的用户发出的总消息数
    * @apiSuccess {String} des 会话描述
    * @apiSuccess {Object} notice 会话公告
    * @apiSuccess {Number} memberCount 会话中的成员数

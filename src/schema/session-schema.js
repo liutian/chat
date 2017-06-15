@@ -53,6 +53,7 @@ const sessionSchema = new Schema({
   des: { type: String, trim: true, maxlength: 500 },//会话描述
   maxMemberCount: { type: Number, default: 200, min: 1, max: 1000 },//限制会话最大成员数
   msgMaxCount: { type: Number, required: true, default: 0 },//会话中的总消息数
+  messageMaxCount: { type: Number, required: true, default: 0 },//会话中用户发送的总消息数
   latestMessage: Schema.Types.Mixed,//会话中最新的消息
   owner: { type: String, required: true },//会话所有者，值为用户的refKey
   admins: [{ type: String, default: [] }],//会话管理员，值为用户的refKey
