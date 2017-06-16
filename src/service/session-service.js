@@ -175,6 +175,20 @@ async function updateSessionInfoFn(data) {
     refKey: oldData.refKey
   }, data, { runValidators: true });
 
+  if (_util.isNumber(data.quiet)) {
+    let app = await appService.get(oldData.appId);
+    let requestData = {
+      room: 'user_' + oldData.refKey,
+      pushAuth: app.pushAuth
+    }
+    if (data.quiet === 1) {
+      requestData.add = [data.sessionId];
+    } else {
+      requestData.remove = [data.sessionId];
+    }
+    setApns(requestData);
+  }
+
 }
 
 async function updateFn(data) {
@@ -1048,6 +1062,35 @@ function _transferMember(pushAuth, members, session, type) {
       } else {
         let err = new Error('statusCode ' + response.statusCode);
         logger.error('transfer members :' + err);
+        reject(err);
+      }
+    });
+  })
+}
+
+
+function setApns(data) {
+  let options = {
+    url: config.push_url + '/api/auth/room-apns',
+    method: 'post',
+    headers: {
+      Authorization: data.pushAuth
+    },
+    json: true
+  };
+
+  options.body = data;
+
+  return new Promise(function (resolve, reject) {
+    request(options, function (err, response, body) {
+      if (err) {
+        logger.error('set apns error: ' + err);
+        reject(err);
+      } else if (response.statusCode == 200) {
+        resolve();
+      } else {
+        let err = new Error('statusCode ' + response.statusCode);
+        logger.error('set apns error :' + err);
         reject(err);
       }
     });

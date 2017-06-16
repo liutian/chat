@@ -1,4 +1,3 @@
-const url = require('url');
 const logger = require('log4js').getLogger('api-user');
 const mongoose = require('mongoose');
 
