@@ -100,12 +100,16 @@ async function _exit(members, session, app, user) {
   }, 'nickname');
   if (memberList.length <= 0) return;
 
+  let updater = { outside: 1, endMsgId: session.msgMaxCount };
+  if (members.length == 1 && members[0] == user.refKey) {
+    updater.clearDate = new Date();
+  }
   await sessionInfoModel.update({
     appId: app.id,
     sessionId: session.id,
     refKey: { $in: members },
     outside: 0
-  }, { outside: 1, endMsgId: session.msgMaxCount }, { multi: true, runValidators: true });
+  }, updater, { multi: true, runValidators: true });
 
   let memberCount = await sessionInfoModel.count({
     appId: app.id,
@@ -309,6 +313,11 @@ async function listHistoryFn(data) {
       } else {
         session.name = '未知';
       }
+    }
+
+    if (session.secret != 1 && session.latestMessage && session.latestMessage.from) {
+      let fromUser = await userService.get(session.latestMessage.from, data.appId);
+      session.latestMessage.fromNickname = fromUser.nickname;
     }
 
     //置顶会话排在最前面
@@ -927,11 +936,11 @@ async function listFn(data) {
 
 async function memberListFn(data) {
   if (!data.appId) apiError.throw('appId cannot be empty');
-  if (!data.id) apiError.throw('id cannot be empty');
+  if (!data.sessionId) apiError.throw('sessionId cannot be empty');
   if (!data.refKey) apiError.throw('refKey cannot be empty');
 
   let isMember = await sessionInfoModel.count({
-    sessionId: data.id,
+    sessionId: data.sessionId,
     appId: data.appId,
     outside: 0,
     refKey: data.refKey
@@ -941,7 +950,7 @@ async function memberListFn(data) {
   let limit = +data.pageSize || 10;
   let skip = ((+data.page || 1) - 1) * limit;
   let sessionInfoList = await sessionInfoModel.find({
-    sessionId: data.id,
+    sessionId: data.sessionId,
     appId: data.appId,
     outside: 0
   }, 'refKey nickname joinDate speakDate').limit(limit).skip(skip);
@@ -965,7 +974,7 @@ async function memberListFn(data) {
 
   if (+data.searchCount == 1) {
     let searchCount = await sessionInfoModel.count({
-      sessionId: data.id,
+      sessionId: data.sessionId,
       appId: data.appId,
       outside: 0
     });
