@@ -317,12 +317,23 @@ async function listHistoryFn(data) {
     if (data.searchAll != 1 && session.clearDate && (!session.latestMessage || (session.latestMessage && session.latestMessage.createdAt
       && session.latestMessage.createdAt.getTime() <= session.clearDate.getTime()))) continue;
 
-    if (session.secret == 1 && session.secretKey && !session.name) {
-      let otherId = session.secretKey.split('::').find(v => v == data.refKey);
-      if (session.otherRemark) {
+    if (session.secret == 1 && session.secretKey) {
+      let other;
+      let otherId = session.secretKey.split('::').find(v => v != data.refKey);
+
+      if (otherId) {
+        other = await userService.get(otherId, data.appId);
+      }
+
+      if (other) {
+        session.avator = other.avator;
+      }
+
+      if (session.name) {
+        //不做任何操作
+      } else if (session.otherRemark) {
         session.name = session.otherRemark;
-      } else if (otherId) {
-        let other = await userService.get(otherId, data.appId);
+      } else if (other) {
         session.name = other.nickname;
       } else {
         session.name = '未知';
@@ -1012,12 +1023,43 @@ async function listAboutMeFn(data) {
   let limit = +oldData.pageSize || 10;
   let skip = ((+oldData.page || 1) - 1) * limit;
   data.outside = 0;
-  let sessionInfoList = await sessionInfoModel.find(data, 'sessionId').limit(limit).skip(skip);
+  let sessionInfoList = await sessionInfoModel.find(data).limit(limit).skip(skip);
+
+  let sessionInfoMap = {};
+  sessionInfoList.forEach((value, index) => sessionInfoMap[value.sessionId] = value.obj);
+
+  let sessionList = await sessionModel.find({
+    _id: { $in: Object.keys(sessionInfoMap) }
+  }, '-notice -des -joinQuestion -joinAnswer').sort('-latestMessage.createdAt');
 
   let returnList = [];
-  for (let i = 0; i < sessionInfoList.length; i++) {
-    let sessionId = sessionInfoList[i].sessionId.toString();
-    let session = await sessionModel.findById(sessionId);
+  for (let i = 0; i < sessionList.length; i++) {
+    let session = sessionList[i].id;
+    Object.assign(session, _util.pick(sessionInfoMap[session.id], '** -sessionId -id'));
+
+    if (session && session.secret == 1 && session.secretKey) {
+      let other;
+      let otherId = session.secretKey.split('::').find(v => v != data.refKey);
+
+      if (otherId) {
+        other = await userService.get(otherId, data.appId);
+      }
+
+      if (other) {
+        session.avator = other.avator;
+      }
+
+      if (session.name) {
+        //不做任何操作
+      } else if (session.otherRemark) {
+        session.name = session.otherRemark;
+      } else if (other) {
+        session.name = other.nickname;
+      } else {
+        session.name = '未知';
+      }
+    }
+
     returnList.push(session.obj);
   }
 
