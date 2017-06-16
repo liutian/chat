@@ -68,7 +68,7 @@ exports.client = async function clientCert(ctx, next) {
       refKey: refKey,
       appId: appId,
       token: token
-    }, 'appId refKey tokenExpiry');
+    }, 'appId refKey tokenExpiry lock del');
     if (!user) {
       ctx.throw(401, { code: 1010 });
     } else if (user.tokenExpiry && Date.now() > user.tokenExpiry) {

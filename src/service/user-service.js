@@ -21,6 +21,7 @@ exports.auth = authFn;
 exports.get = getFn;
 exports.list = listFn;
 exports.createSysSession = createSysSessionFn;
+exports.pushOnlineAuth = pushOnlineAuthFn;
 
 
 /*---------------------------------------- 分割线 ------------------------------------------------*/
@@ -196,4 +197,35 @@ async function listFn(data) {
   }
 
   return returnList;
+}
+
+
+async function pushOnlineAuthFn(data) {
+  if (!data.userid) apiError.throw('userid cannot be empty');
+  if (!data.token) apiError.throw('token cannot be empty');
+  if (!data.appid) apiError.throw('appid cannot be empty');
+
+  let user = await userModel.findOne({
+    refKey: data.userid,
+    appId: data.appid,
+    token: data.token
+  }, 'appId refKey tokenExpiry lock del');
+
+  if (!user) {
+    apiError.throw(1010, 401);
+  } else if (user.tokenExpiry && Date.now() > user.tokenExpiry) {
+    apiError.throw(1025, 401);
+  } else if (user.lock == 1) {
+    apiError.throw(1011, 401);
+  } else if (user.del == 1) {
+    apiError.throw(1012, 401);
+  }
+
+  let sessionInfoList = await sessionInfoModel.find({
+    appId: data.appId,
+    refKey: data.refKey,
+    outside: 0
+  }, 'sessionId');
+
+  return sessionInfoList.map(v => v.sessionId.toString());
 }

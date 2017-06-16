@@ -1,3 +1,4 @@
+const url = require('url');
 const logger = require('log4js').getLogger('api-user');
 const mongoose = require('mongoose');
 
@@ -122,6 +123,25 @@ module.exports = function (router) {
    */
   router.get('/api/user', findUser);
 
+  /**
+   * @api {get} /api/user/push-online-auth 接收并验证推送服务发来的验证请求[第三方服务器]
+   * @apiName auth user from push
+   * @apiGroup user
+   *
+   * @apiUse server_auth
+   *
+   *
+   * @apiParam {String} [userid] 用户refKey
+   * @apiParam {String} [appid] 用户所属的appid
+   * @apiParam {String} [token] 用户验证token
+   *
+   * @apiSampleRequest /api/user/push-online-auth
+   *
+   * @apiSuccess {[string]} rooms 返回用户所有的会话ID
+   *
+   */
+  router.get('/api/user/push-online-auth', pushOnlineAuth);
+
 }
 
 //********************************************************* */
@@ -163,4 +183,10 @@ async function findUser(ctx, next) {
   }
 
   ctx.body = list;
+}
+
+
+async function pushOnlineAuth(ctx, next) {
+  let sessionIdList = await userService.pushOnlineAuth(ctx.request.query);
+  ctx.body = { rooms: sessionIdList };
 }
