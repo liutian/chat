@@ -320,6 +320,11 @@ async function listHistoryFn(data) {
       session.latestMessage.fromNickname = fromUser.nickname;
     }
 
+    if (session.latestMessage) {
+      session.latestMessage.createdAt = _util.formatDate(session.latestMessage.createdAt);
+      session.latestMessage.updatedAt = _util.formatDate(session.latestMessage.updatedAt);
+    }
+
     //置顶会话排在最前面
     if (session.stick == 1) {
       stickSession.push(session);

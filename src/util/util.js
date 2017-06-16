@@ -12,6 +12,8 @@ exports.random = randomFn;
 
 exports.mkdir = mkdirFn;
 
+exports.formatDate = formatDateFn;
+
 
 /*------------------------------------分割线 -----------------------------*/
 
@@ -62,4 +64,16 @@ async function mkdirFn(dirname) {
       await mkdirFn(path.dirname(dirname));
     }
   }
+}
+
+function formatDateFn(date, format) {
+  if (!date) date = new Date();
+  if (!format) format = 'MM-dd HH:mm:ss';
+
+  return format.replace('yyyy', date.getFullYear())
+    .replace('MM', date.getMonth())
+    .replace('dd', date.getDate())
+    .replace('HH', date.getHours())
+    .replace('mm', date.getMinutes())
+    .replace('ss', date.getSeconds());
 }

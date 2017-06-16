@@ -2,6 +2,7 @@ const fs = require('fs');
 const mongoose = require('mongoose');
 const util = require('util');
 
+const _util = require('../util/util');
 const logger = require('log4js').getLogger('schema-index');
 
 const config = require('../config');
@@ -25,10 +26,10 @@ mongoose.plugin(function (schema, options) {
     delete obj._id;
     delete obj.__v;
     if (util.isDate(this.createdAt)) {
-      obj.createdAt = this.createdAt.toLocaleString();
+      obj.createdAt = _util.formatDate(this.createdAt);
     }
     if (util.isDate(this.updatedAt)) {
-      obj.updatedAt = this.updatedAt.toLocaleString();
+      obj.updatedAt = _util.formatDate(this.updatedAt);
     }
     return obj;
   });
