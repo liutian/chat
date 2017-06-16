@@ -53,12 +53,13 @@ module.exports = function (router) {
    * @apiSuccess {String} focusMembers @成员列表,refKey
    * @apiSuccess {Number} del 消息是否删除
    *
+   *
    */
   router.post('/api/message', saveMessage);
 
 
   /**
-   * @api {get} /api/message 查询会话消息[客户端]
+   * @api {get} /api/session/:sessionId/message 查询会话消息[客户端]
    * @apiName search session-message
    * @apiGroup message
    *
@@ -73,9 +74,11 @@ module.exports = function (router) {
    * @apiParam {Number} [searchAll] 是否查询所有消息，默认只查询有限的消息 (>=startMsgId或者<=endMsgId并且没有删除)
    * @apiParam {Number} [searchCount] 是否返回符合条件的总数据个数,可以在响应头的searchCount字段获取该值
    *
+   * @apiSampleRequest /api/session/:sessionId/message
+   *
    * @apiSuccess {[Object]} result 请求返回参数，参考发送消息接口
    */
-  router.get('/api/message', findMessage);
+  router.get('/api/session/:sessionId/message', findMessage);
 
 
   /**
@@ -113,6 +116,7 @@ async function findMessage(ctx, next) {
   let data = ctx.request.query;
   data.refKey = ctx.session.user.refKey;
   data.appId = ctx.session.user.appId;
+  data.sessionId = ctx.params.sessionId;
   let list = await messageService.list(data);
   if (+data.searchCount == 1) {
     ctx.set('searchCount', list.pop());

@@ -6,7 +6,7 @@ const userService = require('../service/user-service');
 module.exports = function (router) {
 
   /**
-   * @api {post} /server-api/user/create 创建用户[第三方服务器]
+   * @api {post} /server-api/user 创建用户[第三方服务器]
    * @apiName create user
    * @apiGroup user
    *
@@ -19,7 +19,7 @@ module.exports = function (router) {
    * @apiParam {[Number]} [location] 用户地理位置
    * @apiParam {String} [des] 用户自己描述
    *
-   * @apiSampleRequest /server-api/user/create
+   * @apiSampleRequest /server-api/user
    *
    * @apiSuccess {String} id 用户唯一标示
    * @apiSuccess {String} appId 所属app的ID
@@ -39,10 +39,10 @@ module.exports = function (router) {
    * @apiSuccess {String} des 用户个人描述
    *
    */
-  router.post('/server-api/user/create', serverCreateUser);
+  router.post('/server-api/user', serverCreateUser);
 
   /**
-   * @api {post} /server-api/user/update 更新用户信息[第三方服务器]
+   * @api {post} /server-api/user/:refKey 更新用户信息[第三方服务器]
    * @apiName update user
    * @apiGroup user
    *
@@ -57,13 +57,13 @@ module.exports = function (router) {
    * @apiParam {Number} [del] 是否删除
    * @apiParam {Number} [lock] 是否锁定
    *
-   * @apiSampleRequest /server-api/user
+   * @apiSampleRequest /server-api/user/:refKey
    *
    */
-  router.post('/server-api/user/update', serverUpdateUser);
+  router.post('/server-api/user/:refKey', serverUpdateUser);
 
   /**
-   * @api {get} /server-api/user/auth 获取客户端认证Token[第三方服务器]
+   * @api {get} /server-api/user/:refKey/auth 获取客户端认证Token[第三方服务器]
    * @apiName get client Token
    * @apiGroup user
    *
@@ -71,12 +71,12 @@ module.exports = function (router) {
    *
    * @apiParam {String} refKey 用户在第三方服务器中的唯一标示一般为用户ID
    *
-   * @apiSampleRequest /server-api/user/auth
+   * @apiSampleRequest /server-api/user/:refKey/auth
    *
    * @apiSuccess {String} token 客户端请求接口时的认证token
    * @apiSuccess {String} [tokenExpiry] token有效期单位小时
    */
-  router.get('/server-api/user/auth', auth);
+  router.get('/server-api/user/:refKey/auth', auth);
 
   /**
    * @api {post} /api/user 更新用户信息[客户端]
@@ -132,8 +132,10 @@ async function serverCreateUser(ctx, next) {
 }
 
 async function serverUpdateUser(ctx, next) {
-  ctx.request.body.appId = ctx.get('AppKey');
-  ctx.body = await userService.updateUser(ctx.request.body);
+  let data = ctx.request.body;
+  data.refKey = ctx.params.refKey;
+  data.appId = ctx.get('AppKey');
+  ctx.body = await userService.updateUser(data);
 }
 
 async function updateUser(ctx, next) {
@@ -146,7 +148,7 @@ async function updateUser(ctx, next) {
 }
 
 async function auth(ctx, next) {
-  let refKey = ctx.request.query.refKey;
+  let refKey = ctx.params.refKey;
   let appId = ctx.get('AppKey');
   let tokenExpiry = ctx.request.query.tokenExpiry;
   ctx.body = await userService.auth(refKey, appId, tokenExpiry);

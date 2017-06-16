@@ -35,13 +35,13 @@ module.exports = function (router) {
    */
 
   /**
-   * @api {post} /platform-api/app 更新App[平台]
+   * @api {post} /platform-api/app/:appId 更新App[平台]
    * @apiName update App[admin]
    * @apiGroup app
    *
    * @apiUse platform_auth
    *
-   * @apiParam {String} id app唯一标示
+   * @apiParam {String} appId app唯一标示
    * @apiParam {String} [des] 描述
    * @apiParam {Number} [maxSessionCount] 每个用户拥有会话最大数(拥有会话指：用户属于会话的超级管理员，该会话的owner等于该用户的refkey)
    * @apiParam {Number} [maxMemberCount] 每个会话拥有的成员最大数
@@ -50,12 +50,12 @@ module.exports = function (router) {
    * @apiParam {Number} [del] 是否删除
    * @apiParam {Number} [lock] 是否锁定
    *
-   * @apiSampleRequest /platform-api/app
+   * @apiSampleRequest /platform-api/app/:appId
    *
    * @apiSuccess {Object} result 请求返回参数，参考创建app接口
    *
    */
-  router.post('/platform-api/app', platformSave);
+  router.post('/platform-api/app/:appId', platformSave);
 
 
   /**
@@ -83,11 +83,12 @@ module.exports = function (router) {
 //********************************************************* */
 
 async function platformSave(ctx, next) {
-  let id = ctx.request.body.id;
-  if (id) {
-    ctx.body = await appServer.updateApp(ctx.request.body);
+  let data = ctx.request.body;
+  if (ctx.params.appId) {
+    data.id = ctx.params.appId;
+    ctx.body = await appServer.updateApp(data);
   } else {
-    ctx.body = await appServer.createApp(ctx.request.body);
+    ctx.body = await appServer.createApp(data);
   }
 }
 

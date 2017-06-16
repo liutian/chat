@@ -47,7 +47,7 @@ module.exports = function (router) {
    * @apiSuccess {String} des 会话描述
    * @apiSuccess {Object} notice 会话公告
    * @apiSuccess {Number} memberCount 会话中的成员数
-   * @apiSuccess {Object} latestMessage 会话中最新的消息，参见消息接口
+   * @apiSuccess {Object} latestMessage 会话中最新的消息，参见消息接口 该对象可能二外包含fromNickname
    * @apiSuccess {String} owner 会话所有者，值为用户的refKey
    * @apiSuccess {[String]} admins 会话管理员，值为用户的refKey
    * @apiSuccess {Number} mute 禁言只有会话所有者才能操作，禁言之后只有会话所有者才能发言
@@ -62,7 +62,7 @@ module.exports = function (router) {
    */
 
   /**
-   * @api {post} /api/session 更新会话信息[客户端]
+   * @api {post} /api/session/:sessionId 更新会话信息[客户端]
    * @apiName update session
    * @apiGroup session
    *
@@ -89,13 +89,13 @@ module.exports = function (router) {
    * @apiParam {[String]} [admins] 会话管理员(只有会话所有者可以更改)
    * @apiParam {Number} [changeNotice] 是否根据修改字段生成相应的会话消息，作为记录
    *
-   * @apiSampleRequest /api/message
+   * @apiSampleRequest /api/session/:sessionId
    *
    */
-  router.post('/api/session', saveSession);
+  router.post('/api/session/:sessionId', saveSession);
 
   /**
-   * @api {post} /api/session/enter 加入会话[客户端]
+   * @api {post} /api/session/:sessionId/enter 加入会话[客户端]
    * @apiName enter session
    * @apiGroup session
    * @apiDescription 邀请加入或者自己加入会话
@@ -107,13 +107,13 @@ module.exports = function (router) {
    * @apiParam {Number} [backView] 是否可以查看加入会话之前的会话消息，默认是不可以
    * @apiParam {String} [joinAnswer] 如果会话需要回答问题该字段用于用户提交的答案
    *
-   * @apiSampleRequest /api/session/enter
+   * @apiSampleRequest /api/session/:sessionId/enter
    *
    * @apiSuccess {Object} result 请求返回参数，参考创建会话接口
    */
 
   /**
-   * @api {post} /api/session/enter 管理员审核用户是否可以加入会话[客户端]
+   * @api {post} /api/session/:sessionId/enter 管理员审核用户是否可以加入会话[客户端]
    * @apiName audit enter session
    * @apiGroup session
    * @apiDescription 包括用户自己加入会话时需要的审核和成员邀请其他人加入会话时的审核
@@ -125,13 +125,13 @@ module.exports = function (router) {
    * @apiParam {String} [rejectReason] 审核不通过的原因
    * @apiParam {Number} resolve 审核是否通过
    *
-   * @apiSampleRequest /api/session/enter
+   * @apiSampleRequest /api/session/:sessionId/enter
    *
    * @apiSuccess {Object} result 请求返回参数，参考创建会话接口
    */
 
   /**
-   * @api {post} /api/session/enter 用户同意或者拒绝被邀请加入会话[客户端]
+   * @api {post} /api/session/:sessionId/enter 用户同意或者拒绝被邀请加入会话[客户端]
    * @apiName agree enter session
    * @apiGroup session
    *
@@ -141,14 +141,14 @@ module.exports = function (router) {
    * @apiParam {Number} [backView] 是否可以查看加入会话之前的会话消息，默认是不可以
    * @apiParam {Number} resolve 是否同意
    *
-   * @apiSampleRequest /api/session/enter
+   * @apiSampleRequest /api/session/:sessionId/enter
    *
    * @apiSuccess {Object} result 请求返回参数，参考创建会话接口
    */
-  router.post('/api/session/enter', enter);
+  router.post('/api/session/:sessionId/enter', enter);
 
   /**
-   * @api {post} /api/session/exit 退出会话或从会话中踢出[客户端]
+   * @api {post} /api/session/:sessionId/exit 退出会话或从会话中踢出[客户端]
    * @apiName exit session
    * @apiGroup session
    *
@@ -157,14 +157,14 @@ module.exports = function (router) {
    * @apiParam {String} sessionId 会话ID
    * @apiParam {[String]} [members] 要踢出的成员列表，如果是自己退出不需要这个参数
    *
-   * @apiSampleRequest /api/session/exit
+   * @apiSampleRequest /api/session/:sessionId/exit
    *
    * @apiSuccess {Object} result 请求返回参数，参考创建会话接口
    */
-  router.post('/api/session/exit', exit);
+  router.post('/api/session/:sessionId/exit', exit);
 
   /**
-   * @api {get} /api/session/history 查询用户自己的历史会话[客户端]
+   * @api {get} /api/session-history 查询用户自己的历史会话[客户端]
    * @apiName search history session list
    * @apiGroup session
    *
@@ -172,15 +172,15 @@ module.exports = function (router) {
    *
    * @apiParam {Number} [searchAll] 是否查询所有相关会话, 1 查询所有会话 0 排除从列表中主动删除的会话
    *
-   * @apiSampleRequest /api/session/history
+   * @apiSampleRequest /api/session-history
    *
    * @apiSuccess {[Object]} result 请求返回参数，参考创建会话接口
    */
-  router.get('/api/session/history', findHistorySession);
+  router.get('/api/session-history', findHistorySession);
 
 
   /**
-   * @api {get} /api/session/:id 查询会话详情[客户端]
+   * @api {get} /api/session/:sessionId 查询会话详情[客户端]
    * @apiName session detail
    * @apiGroup session
    *
@@ -188,7 +188,7 @@ module.exports = function (router) {
    *
    * @apiParam {String} sessionId 会话ID
    *
-   * @apiSampleRequest /api/session/:id
+   * @apiSampleRequest /api/session/:sessionId
    *
    * stick quiet clearDate outside
    * @apiSuccess {Object} result 请求返回参数，大部分参考创建会话接口,下面是和用户自己相关的会话信息
@@ -205,12 +205,12 @@ module.exports = function (router) {
    * @apiSuccess {String} otherRemark 私聊时用户可以备注对方,该字段有对方修改自己不能修改
    *
    */
-  router.get('/api/session/:id', getSession);
+  router.get('/api/session/:sessionId', getSession);
 
 
 
   /**
-   * @api {post} /api/session-info 更新和用户自己相关的会话信息[客户端]
+   * @api {post} /api/session/:sessionId/info 更新和用户自己相关的会话信息[客户端]
    * @apiName update session-info
    * @apiGroup session
    *
@@ -225,10 +225,10 @@ module.exports = function (router) {
    * @apiParam {Number} [clearMsg] 是否清楚会话内的消息
    * @apiParam {String} [otherRemark] 私聊时用户可以备注对方
    *
-   * @apiSampleRequest /api/session-info
+   * @apiSampleRequest /api/session/:sessionId/info
    *
    */
-  router.post('/api/session-info', saveSessionInfo);
+  router.post('/api/session/:sessionId/info', saveSessionInfo);
 
 
   /**
@@ -262,7 +262,7 @@ module.exports = function (router) {
   router.get('/api/session', findSession);
 
   /**
-   * @api {get} /api/session/:id/member 查询会话成员列表[客户端]
+   * @api {get} /api/session/:sessionId/member 查询会话成员列表[客户端]
    * @apiName search session member list
    * @apiGroup session
    *
@@ -272,11 +272,11 @@ module.exports = function (router) {
    * @apiParam {Number} [pageSize] 每一页显示数据量
    * @apiParam {Number} [searchCount] 是否返回符合条件的总数据个数,可以在响应头的searchCount字段获取该值
    *
-   * @apiSampleRequest /api/session/:id/member
+   * @apiSampleRequest /api/session/:sessionId/member
    *
    * @apiSuccess {[Object]} result 请求返回参数，参考创建用户接口
    */
-  router.get('/api/session/:id/member', findSessionMember);
+  router.get('/api/session/:sessionId/member', findSessionMember);
 
 
   /**
@@ -305,47 +305,56 @@ module.exports = function (router) {
 async function getSession(ctx, next) {
   ctx.request.query.refKey = ctx.session.user.refKey;
   ctx.request.query.appId = ctx.session.user.appId;
-  ctx.request.query.sessionId = ctx.params.id;
+  ctx.request.query.sessionId = ctx.params.sessionId;
   ctx.body = await sessionService.detail(ctx.request.query);
 }
 
 async function findHistorySession(ctx, next) {
-  ctx.request.query.refKey = ctx.session.user.refKey;
-  ctx.request.query.appId = ctx.session.user.appId;
-  ctx.body = await sessionService.listHistory(ctx.request.query);
+  let data = ctx.request.query;
+  data.refKey = ctx.session.user.refKey;
+  data.appId = ctx.session.user.appId;
+  ctx.body = await sessionService.listHistory(data);
 }
 
 async function saveSession(ctx, next) {
-  if (ctx.request.body.sessionId) {
-    ctx.request.body.refKey = ctx.session.user.refKey;
-    ctx.request.body.appId = ctx.session.user.appId;
-    await sessionService.update(ctx.request.body);
+  let data = ctx.request.body;
+  if (ctx.params.sessionId) {
+    data.sessionId = ctx.params.sessionId;
+    data.refKey = ctx.session.user.refKey;
+    data.appId = ctx.session.user.appId;
+    await sessionService.update(data);
     ctx.body = {};
   } else {
-    ctx.request.body.founder = ctx.session.user.refKey;
-    ctx.request.body.appId = ctx.session.user.appId;
-    ctx.body = await sessionService.create(ctx.request.body);
+    data.founder = ctx.session.user.refKey;
+    data.appId = ctx.session.user.appId;
+    ctx.body = await sessionService.create(data);
   }
 }
 
 async function enter(ctx, next) {
-  ctx.request.body.refKey = ctx.session.user.refKey;
-  ctx.request.body.appId = ctx.session.user.appId;
-  await sessionService.enter(ctx.request.body);
+  let data = ctx.request.body;
+  data.refKey = ctx.session.user.refKey;
+  data.appId = ctx.session.user.appId;
+  data.sessionId = ctx.params.sessionId;
+  await sessionService.enter(data);
   ctx.body = {};
 }
 
 async function exit(ctx, next) {
-  ctx.request.body.refKey = ctx.session.user.refKey;
-  ctx.request.body.appId = ctx.session.user.appId;
-  await sessionService.exit(ctx.request.body);
+  let data = ctx.request.body;
+  data.refKey = ctx.session.user.refKey;
+  data.appId = ctx.session.user.appId;
+  data.sessionId = ctx.params.sessionId;
+  await sessionService.exit(data);
   ctx.body = {};
 }
 
 async function saveSessionInfo(ctx, next) {
-  ctx.request.body.refKey = ctx.session.user.refKey;
-  ctx.request.body.appId = ctx.session.user.appId;
-  await sessionService.updateSessionInfo(ctx.request.body);
+  let data = ctx.request.body;
+  data.sessionId = ctx.params.sessionId;
+  data.refKey = ctx.session.user.refKey;
+  data.appId = ctx.session.user.appId;
+  await sessionService.updateSessionInfo(data);
   ctx.body = {};
 }
 
@@ -363,7 +372,7 @@ async function findSession(ctx, next) {
 async function findSessionMember(ctx, next) {
   let data = ctx.request.query;
   data.appId = ctx.session.user.appId;
-  data.id = ctx.params.id;
+  data.sessionId = ctx.params.sessionId;
   data.refKey = ctx.session.user.refKey;
   let list = await sessionService.memberList(data);
   if (+data.searchCount == 1) {
