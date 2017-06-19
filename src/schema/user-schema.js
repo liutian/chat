@@ -24,7 +24,12 @@ const userSchema = new Schema({
     max: 3,
     default: 1
   },
-  location: { type: [Number], index: '2d' },
+  location: {
+    type: [Number], index: {
+      type: '2dsphere',
+      sparse: true
+    }
+  },
   token: { type: String, trim: true, maxlength: 100 },
   tokenExpiry: { type: Date },
   joinSessionAgree: { type: Number, min: 0, max: 1, default: 0 },//被邀请加入会话是否需要同意

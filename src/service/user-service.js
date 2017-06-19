@@ -171,11 +171,12 @@ async function syncUserToRedis(user) {
 
 async function listFn(data) {
   let oldData = data;
-  data = _util.pick(data, 'nickname sex del lock appId letterNickname name');
+  data = _util.pick(data, 'nickname sex del lock appId letterNickname name ');
   if (!data.appId) apiError.throw('appId cannot be empty');
 
   let limit = +oldData.pageSize || 10;
   let skip = ((+oldData.page || 1) - 1) * limit;
+
   if (data.nickname) data.nickname = new RegExp(data.nickname, 'i');
   if (data.letterNickname) data.letterNickname = new RegExp(data.letterNickname, 'i');
   if (data.name) {
@@ -186,6 +187,19 @@ async function listFn(data) {
     delete data.nickname;
     delete data.letterNickname;
   }
+  if (oldData.locationX && oldData.locationY) {
+    let point = [oldData.locationX, oldData.locationY];
+    data.location = {
+      $nearSphere: {
+        $geometry: {
+          type: 'Point',
+          coordinates: point
+        },
+        $maxDistance: oldData.locationRadius || 1000
+      }
+    }
+  }
+
   data.sim = 0;
   let userList = await userModel.find(data).limit(limit).skip(skip);
 
