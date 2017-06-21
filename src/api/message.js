@@ -41,7 +41,7 @@ module.exports = function (router) {
    * @apiSuccess {String} relevantStatus 关联事件是否操作完成比如是否审批用户加入，用户是否同意加入 1 未处理 2同意 3拒绝
    * @apiSuccess {String} relevantStatusUpdater 更新relevantStatus的操作者
    * @apiSuccess {Object} from 消息发送者refKey，参见用户接口
-   * @apiSuccess {Object} content 消息数据
+   * @apiSuccess {String} content 消息数据
    * @apiSuccess {String} textContent 消息内容纯文本
    * @apiSuccess {String} pushResult 消息推送结果信息,该信息是异步更新,发送消息返回的结果不会有该信息,该字段只是帮助后续查询使用
    * @apiSuccess {Number} anonymously 消息是否是匿名消息
@@ -89,10 +89,10 @@ module.exports = function (router) {
    *
    * @apiUse client_auth
    *
-   * @apiParam {Number} size 文件大小
-   * @apiParam {String} path 文件访问路径，相对服务器的路径
-   * @apiParam {String} name 文件名称
-   * @apiParam {String} type 文件类型
+   * @apiSuccess {Number} size 文件大小
+   * @apiSuccess {String} path 文件访问路径，相对服务器的路径
+   * @apiSuccess {String} name 文件名称
+   * @apiSuccess {String} type 文件类型
    *
    */
   router.post('/api/message/upload', upload);

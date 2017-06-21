@@ -3,7 +3,7 @@ const Schema = mongoose.Schema;
 
 const messageSchema = new Schema({
   msgId: { type: Number, required: true, min: 1 },//从0递增+1 对应会话中的msgMaxCount
-  messageId: { type: Number, required: true, min: 1 },//从0递增+1 对应会话中的messageMaxCount 有可能出现多个消息messageId一样的情况
+  messageId: { type: Number, required: true, min: 0 },//默认值必须为0 从0递增+1 对应会话中的messageMaxCount 有可能出现多个消息messageId一样的情况
   sessionId: { type: Schema.Types.ObjectId, required: true },
   sessionSecret: {//是否是私聊会话
     type: Number,

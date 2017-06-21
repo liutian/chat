@@ -34,6 +34,8 @@ module.exports = function (router) {
    *
    */
 
+  router.post('/platform-api/app', platformCreate);
+
   /**
    * @api {post} /platform-api/app/:appId 更新App[平台]
    * @apiName update App[admin]
@@ -82,14 +84,16 @@ module.exports = function (router) {
 
 //********************************************************* */
 
+async function platformCreate(ctx, next) {
+  let data = ctx.request.body;
+  ctx.body = await appServer.createApp(data);
+}
+
+
 async function platformSave(ctx, next) {
   let data = ctx.request.body;
-  if (ctx.params.appId) {
-    data.id = ctx.params.appId;
-    ctx.body = await appServer.updateApp(data);
-  } else {
-    ctx.body = await appServer.createApp(data);
-  }
+  data.id = ctx.params.appId;
+  ctx.body = await appServer.updateApp(data);
 }
 
 async function serverUpdate(ctx, next) {

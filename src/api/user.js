@@ -109,8 +109,8 @@ module.exports = function (router) {
    * @apiParam {String} [letterNickname] 用户昵称首字母大写
    * @apiParam {String} [name] 用户昵称或者首字母大写复合查询
    * @apiParam {Number} [sex] 用户性别 1:男 2:女 3:其他
-   * @apiParam {[Number]} [locationX] 用户地理位置 经度
-   * @apiParam {[Number]} [locationY] 用户地理位置 维度
+   * @apiParam {Number} [locationX] 用户地理位置 经度
+   * @apiParam {Number} [locationY] 用户地理位置 维度
    * @apiParam {Number} [locationRadius] 搜索半径 单位米
    * @apiParam {Number} [del] 用户地理位置
    * @apiParam {Number} [lock] 用户地理位置
@@ -170,7 +170,7 @@ async function updateUser(ctx, next) {
 async function auth(ctx, next) {
   let refKey = ctx.params.refKey;
   let appId = ctx.get('AppKey');
-  let tokenExpiry = ctx.request.query.tokenExpiry;
+  let tokenExpiry = +ctx.request.query.tokenExpiry;
   ctx.body = await userService.auth(refKey, appId, tokenExpiry);
 }
 

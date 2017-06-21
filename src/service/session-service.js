@@ -3,6 +3,7 @@ const messageModal = require('mongoose').model('message');
 const sessionModel = require('mongoose').model('session');
 const userModel = require('mongoose').model('user');
 const util = require('util');
+const request = require('request');
 
 const apiError = require('../util/api-error');
 const _util = require('../util/util');
@@ -11,6 +12,8 @@ const messageService = require('./message-service');
 const userService = require('./user-service');
 const letter = require('../util/letter');
 const pushService = require('./push-service');
+const config = require('../config');
+const logger = require('log4js').getLogger('session-service');
 
 
 //创建会话,members字段可以为空
@@ -79,7 +82,7 @@ async function exitFn(data) {
   if (!data.members || data.members.length <= 0) {
     if (data.refKey == session.owner) apiError.throw('you are owner cannot exit session');
     await _exit([data.refKey], session, app, user);
-  } else if (!session.admins.includes(data.refKey) || session.owner != data.refKey) {
+  } else if (!session.admins.includes(data.refKey) && session.owner != data.refKey) {
     //只有管理员才可以踢出他人
     apiError.throw('you are not session admin or owner');
   } else {
@@ -152,7 +155,11 @@ async function _exit(members, session, app, user) {
     leaveMessage: 1
   });
 
-  _transferMember(app.pushAuth, members, session.id, 'leave');
+  try {
+    _transferMember(app.pushAuth, members, session.id, 'leave');
+  } catch (e) {
+    logger.error(`exit session id:${session.id} fail for transferMember`);
+  }
 }
 
 async function updateSessionInfoFn(data) {
@@ -297,6 +304,7 @@ async function listHistoryFn(data) {
   //基本数据校验
   if (!data.refKey) apiError.throw('refKey cannot be empty');
   if (!data.appId) apiError.throw('appId cannot be empty');
+  if (data.searchAll) data.searchAll = +data.searchAll;
 
   //每次都查出来所有关联的会话，然后在进行筛选
   let query = { refKey: data.refKey, appId: data.appId };
@@ -342,7 +350,7 @@ async function listHistoryFn(data) {
 
     if (session.secret != 1 && session.latestMessage && session.latestMessage.from) {
       let fromUser = await userService.get(session.latestMessage.from, data.appId);
-      session.latestMessage.fromNickname = fromUser.nickname;
+      session.latestMessage.from = fromUser.obj;
     }
 
     if (session.latestMessage) {
@@ -380,7 +388,7 @@ async function createFn(data) {
   if (!app) apiError.throw('app does not exist');
   if (app.lock == 1) apiError.throw(1026);
   if (app.del == 1) apiError.throw(1027);
-
+  heavyMembers(oldData.members);
 
   let secretSession = Array.isArray(oldData.members) && oldData.members.length == 1
     && oldData.members[0].type == 'U' && oldData.members[0].id != data.founder;
@@ -431,7 +439,11 @@ async function createFn(data) {
     await _enter(app, newSession, oldData.members, founder, 1);
   }
 
-  _transferMember(app.pushAuth, [founder.refKey], newSession.id, 'enter');
+  try {
+    _transferMember(app.pushAuth, [founder.refKey], newSession.id, 'enter');
+  } catch (e) {
+    logger.error(`enter session id:${newSession.id} fail for transferMember -> founder`);
+  }
 
   return newSession.obj;
 }
@@ -745,7 +757,11 @@ async function _enter(app, session, members, from, historyView) {
     leaveMessage: 1
   });
 
-  _transferMember(app.pushAuth, noAgreeMembers.map(v => v.refKey), session.id, 'enter');
+  try {
+    _transferMember(app.pushAuth, noAgreeMembers.map(v => v.refKey), session.id, 'enter');
+  } catch (e) {
+    logger.error(`enter session id:${session.id} fail for transferMember `);
+  }
 }
 
 async function updateSessionForMemberChange(app, session) {
@@ -781,7 +797,6 @@ async function updateSessionForMemberChange(app, session) {
       memberCount: memberCount
     }, { runValidators: true });
   }
-
 }
 
 //查看每一个成员信息，判断是否需要邀请通知
@@ -851,7 +866,8 @@ async function updateSessionInfo(appId, session, members, historyView) {
       clearDate: null,
       stick: 0,
       outside: 0,
-      endMsgId: null
+      endMsgId: null,
+      secret: session.secret
     };
     //historyView = 1 可以查看加入会话之前的消息
     if (historyView !== 1) {
@@ -945,12 +961,21 @@ async function listFn(data) {
   let oldData = data;
   data = _util.pick(data, 'appId type category publicSearch secret name joinStrategy inviteStrategy founder owner mute del lock');
   if (!oldData.appId) apiError.throw('appId cannot be empty');
+  data.type && (data.type = +data.type);
+  data.category && (data.category = +data.category);
+  data.publicSearch && (data.publicSearch = +data.publicSearch);
+  data.secret && (data.secret = +data.secret);
+  data.joinStrategy && (data.joinStrategy = +data.joinStrategy);
+  data.inviteStrategy && (data.inviteStrategy = +data.inviteStrategy);
+  data.mute && (data.mute = +data.mute);
+  data.del && (data.del = +data.del);
+  data.lock && (data.lock = +data.lock);
 
   let limit = +oldData.pageSize || 10;
   let skip = ((+oldData.page || 1) - 1) * limit;
   if (data.name) data.name = new RegExp(data.name, 'i');
-  if (oldData.admin) data.admins = oldData.admin;
-  data.publicSearch = 1;
+  if (oldData.admin) data.admins = +oldData.admin;
+  // data.publicSearch = 1;
   let sessionList = await sessionModel.find(data).limit(limit).skip(skip);
 
   let returnList = sessionList.map(v => v.obj);
@@ -1019,6 +1044,8 @@ async function listAboutMeFn(data) {
   data = _util.pick(data, 'refKey appId secret stick quiet');
   if (!data.refKey) apiError.throw('refKey cannot be empty');
   if (!data.appId) apiError.throw('appId cannot be empty');
+  data.sessionType && (data.sessionType = +data.sessionType);
+  data.secret && (data.secret = +data.secret);
 
   let limit = +oldData.pageSize || 10;
   let skip = ((+oldData.page || 1) - 1) * limit;
@@ -1034,7 +1061,7 @@ async function listAboutMeFn(data) {
 
   let returnList = [];
   for (let i = 0; i < sessionList.length; i++) {
-    let session = sessionList[i].id;
+    let session = sessionList[i];
     Object.assign(session, _util.pick(sessionInfoMap[session.id], '** -sessionId -id'));
 
     if (session && session.secret == 1 && session.secretKey) {
@@ -1137,4 +1164,23 @@ function setApns(data) {
       }
     });
   })
+}
+
+function heavyMembers(members) {
+  if (!Array.isArray(members)) return;
+
+  let userMap = {};
+  let sessionMap = {};
+  let oldMembers = members.concat();
+  members.length = 0;
+
+  oldMembers.forEach(function (v) {
+    if (v.type == 'U' && !userMap[v.id]) {
+      userMap[v.id] = v;
+      members.push(v);
+    } else if (v.type == 'S' && !sessionMap[v.id]) {
+      sessionMap[v.id] = v;
+      members.push(v);
+    }
+  });
 }

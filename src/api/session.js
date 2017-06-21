@@ -47,7 +47,7 @@ module.exports = function (router) {
    * @apiSuccess {String} des 会话描述
    * @apiSuccess {Object} notice 会话公告
    * @apiSuccess {Number} memberCount 会话中的成员数
-   * @apiSuccess {Object} latestMessage 会话中最新的消息，参见消息接口 该对象可能二外包含fromNickname
+   * @apiSuccess {Object} latestMessage 会话中最新的消息，参见消息接口
    * @apiSuccess {String} owner 会话所有者，值为用户的refKey
    * @apiSuccess {[String]} admins 会话管理员，值为用户的refKey
    * @apiSuccess {Number} mute 禁言只有会话所有者才能操作，禁言之后只有会话所有者才能发言
@@ -60,7 +60,8 @@ module.exports = function (router) {
    * @apiSuccess {[String]} [noAuditAdmin] 不需要接收审核消息的管理员列表(用户的refKey)
    * @apiSuccess {Date} [updateDate] 更新会话本身时才会更新该字段(普通成员变动不会更新该字段)
    */
-
+  router.post('/api/session', createSession);
+  router.put('/api/session', createSession);
   /**
    * @api {post} /api/session/:sessionId 更新会话信息[客户端]
    * @apiName update session
@@ -109,7 +110,6 @@ module.exports = function (router) {
    *
    * @apiSampleRequest /api/session/:sessionId/enter
    *
-   * @apiSuccess {Object} result 请求返回参数，参考创建会话接口
    */
 
   /**
@@ -127,7 +127,6 @@ module.exports = function (router) {
    *
    * @apiSampleRequest /api/session/:sessionId/enter
    *
-   * @apiSuccess {Object} result 请求返回参数，参考创建会话接口
    */
 
   /**
@@ -143,7 +142,6 @@ module.exports = function (router) {
    *
    * @apiSampleRequest /api/session/:sessionId/enter
    *
-   * @apiSuccess {Object} result 请求返回参数，参考创建会话接口
    */
   router.post('/api/session/:sessionId/enter', enter);
 
@@ -159,7 +157,6 @@ module.exports = function (router) {
    *
    * @apiSampleRequest /api/session/:sessionId/exit
    *
-   * @apiSuccess {Object} result 请求返回参数，参考创建会话接口
    */
   router.post('/api/session/:sessionId/exit', exit);
 
@@ -190,7 +187,7 @@ module.exports = function (router) {
    *
    * @apiSampleRequest /api/session/:sessionId
    *
-   * stick quiet clearDate outside
+   *
    * @apiSuccess {Object} result 请求返回参数，大部分参考创建会话接口,下面是和用户自己相关的会话信息
    * @apiSuccess {Number} startMsgId 查询会话消息时最小消息Id
    * @apiSuccess {Number} endMsgId 查询会话消息时最大消息Id
@@ -242,12 +239,12 @@ module.exports = function (router) {
    * @apiParam {Number} [category] 会话类别
    * @apiParam {Number} [publicSearch] 会话是否可以公开搜索到
    * @apiParam {Number} [secret] 私聊类型会话
-   * @apiParam {Number} [name] 会话名称模糊查询
+   * @apiParam {String} [name] 会话名称模糊查询
    * @apiParam {Number} [joinStrategy] 会话加入策略
    * @apiParam {Number} [inviteStrategy] 会话邀请策略
-   * @apiParam {Number} [founder] 会话创建者ID
-   * @apiParam {Number} [owner] 会话拥有者
-   * @apiParam {Number} [admin] 会话管理者
+   * @apiParam {String} [founder] 会话创建者refKey
+   * @apiParam {String} [owner] 会话拥有者refKey
+   * @apiParam {String} [admin] 会话管理者refKey
    * @apiParam {Number} [mute] 会话是否禁言
    * @apiParam {Number} [del] 会话是否删除
    * @apiParam {Number} [lock] 会话是否锁定
@@ -318,17 +315,18 @@ async function findHistorySession(ctx, next) {
 
 async function saveSession(ctx, next) {
   let data = ctx.request.body;
-  if (ctx.params.sessionId) {
-    data.sessionId = ctx.params.sessionId;
-    data.refKey = ctx.session.user.refKey;
-    data.appId = ctx.session.user.appId;
-    await sessionService.update(data);
-    ctx.body = {};
-  } else {
-    data.founder = ctx.session.user.refKey;
-    data.appId = ctx.session.user.appId;
-    ctx.body = await sessionService.create(data);
-  }
+  data.sessionId = ctx.params.sessionId;
+  data.refKey = ctx.session.user.refKey;
+  data.appId = ctx.session.user.appId;
+  await sessionService.update(data);
+  ctx.body = {};
+}
+
+async function createSession(ctx, next) {
+  let data = ctx.request.body;
+  data.founder = ctx.session.user.refKey;
+  data.appId = ctx.session.user.appId;
+  ctx.body = await sessionService.create(data);
 }
 
 async function enter(ctx, next) {

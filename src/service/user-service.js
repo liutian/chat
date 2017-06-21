@@ -172,6 +172,9 @@ async function syncUserToRedis(user) {
 async function listFn(data) {
   let oldData = data;
   data = _util.pick(data, 'nickname sex del lock appId letterNickname name ');
+  if (data.del) data.del = +data.del;
+  if (data.sex) data.del = +data.sex;
+  if (data.lock) data.del = +data.lock;
   if (!data.appId) apiError.throw('appId cannot be empty');
 
   let limit = +oldData.pageSize || 10;
@@ -188,14 +191,14 @@ async function listFn(data) {
     delete data.letterNickname;
   }
   if (oldData.locationX && oldData.locationY) {
-    let point = [oldData.locationX, oldData.locationY];
+    let point = [+oldData.locationX, +oldData.locationY];
     data.location = {
       $nearSphere: {
         $geometry: {
           type: 'Point',
           coordinates: point
         },
-        $maxDistance: oldData.locationRadius || 1000
+        $maxDistance: +oldData.locationRadius || 1000
       }
     }
   }

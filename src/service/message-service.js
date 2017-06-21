@@ -48,7 +48,7 @@ async function listFn(data) {
   };
   //all为1时会查询该会话下的所有消息，
   //包括删除的以及查询段之外的(startMsgId - endMsgId这两个字段用在退出会话之后的消息不能被看到或者加入之后不能查看加入之前的会话)
-  if (data.searchAll == 1) {
+  if (+data.searchAll == 1) {
     if (data.latestMessageId) {
       query.msgId = { $lt: data.latestMessageId };
     }
@@ -63,15 +63,15 @@ async function listFn(data) {
   };
   //可以根据消息类型查询
   if (Array.isArray(data.type)) {
-    query.type = { $in: data.type };
-  } else if (Number.isInteger(data.type)) {
-    query.type = data.type;
+    query.type = { $in: data.type.map(v => +v) };
+  } else if (Number.isInteger(+data.type)) {
+    query.type = +data.type;
   }
   //可以根据消息内容类型查询
   if (Array.isArray(data.contentType)) {
-    query.contentType = { $in: data.contentType };
-  } else if (Number.isInteger(data.contentType)) {
-    query.contentType = data.contentType;
+    query.contentType = { $in: data.contentType.map(v => +v) };
+  } else if (Number.isInteger(+data.contentType)) {
+    query.contentType = +data.contentType;
   }
 
   if (!util.isNumber(query.msgId.$gte)) delete query.msgId.$gte;

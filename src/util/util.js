@@ -3,6 +3,7 @@ const util = require('util');
 const fs = require('fs');
 const path = require('path');
 
+const objProToString = Object.prototype.toString;
 const fsAccess = util.promisify(fs.access);
 const fsMkdir = util.promisify(fs.mkdir);
 
@@ -14,6 +15,17 @@ exports.mkdir = mkdirFn;
 
 exports.formatDate = formatDateFn;
 
+exports.isDate = function (value) { return objProToString.call(value) == '[object Date]' }
+
+exports.isRegExp = function (value) { return objProToString.call(value) == '[object RegExp]' }
+
+exports.isNumber = function (value) { return objProToString.call(value) == '[object Number]' }
+
+exports.isString = function (value) { return objProToString.call(value) == '[object String]' }
+
+exports.isBoolean = function (value) { return objProToString.call(value) == '[object Boolean]' }
+
+exports.isObject = function (value) { return objProToString.call(value) == '[object Object]' }
 
 /*------------------------------------分割线 -----------------------------*/
 
@@ -62,6 +74,7 @@ async function mkdirFn(dirname) {
   } catch (e) {
     if (e.code != 'EEXIST') {
       await mkdirFn(path.dirname(dirname));
+      await fsMkdir(dirname);
     }
   }
 }

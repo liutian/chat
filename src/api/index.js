@@ -1,3 +1,6 @@
+//提供性能
+//global.Promise = require('bluebird');
+
 const fs = require('fs');
 const Koa = require('koa');
 const Router = require('koa-router');
