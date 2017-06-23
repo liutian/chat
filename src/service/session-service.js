@@ -749,7 +749,7 @@ async function _enter(app, session, members, from, historyView) {
   }
 
   //更新会话信息
-  updateSessionForMemberChange(app, session);
+  await updateSessionForMemberChange(app, session);
 
   let nicknameStr = noAgreeMembers.map(v => v.nickname).join('、');
   let prefix = '';

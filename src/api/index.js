@@ -112,6 +112,7 @@ function onerror(err) {
     } else {
       err.message = '{"code": 1015,"msg": "' + (err.message || 'db error') + '"}';
     }
+    logger.error(err.message);
   }
 
   //如果服务器报错打印错误信息到日志中

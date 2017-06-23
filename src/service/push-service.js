@@ -30,6 +30,10 @@ function pushFn(data, leaveMessage) {
     json: true
   };
 
+  let pushData = data.pushData;
+  if (data.pushData.textContent) {
+    pushData.apsData = { aps: { alert: data.pushData.textContent } };
+  }
   options.body = {
     room: data.room,
     pushData: data.pushData,
