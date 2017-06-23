@@ -59,6 +59,17 @@ module.exports = function (router) {
    * @apiSuccess {String} joinAnswer 加入会话时需要回答的问题的答案
    * @apiSuccess {[String]} [noAuditAdmin] 不需要接收审核消息的管理员列表(用户的refKey)
    * @apiSuccess {Date} [updateDate] 更新会话本身时才会更新该字段(普通成员变动不会更新该字段)
+   *
+   * @apiSuccess {Number} [sessionType] **附加属性：会话类型 1: 普通会话 2： 系统会话
+   * @apiSuccess {String} [background] **附加属性：该会话的背景图
+   * @apiSuccess {Date} [joinDate] **附加属性：加入会话的时间
+   * @apiSuccess {Date} [speakDate] **附加属性：最后一次发消息，系统消息不作为真正的发消息
+   * @apiSuccess {String} [nickname] **附加属性：在该会话中的昵称（只有在会话消息列表，会话成员列表会显示该字段）
+   * @apiSuccess {Number} [stick] **附加属性：会话是否置顶
+   * @apiSuccess {Number} [quiet] **附加属性：是否开启消息免打扰,暂时只是用来显示不用来逻辑判断
+   * @apiSuccess {Number} [outside] **附加属性：用户是否退出会话
+   * @apiSuccess {Number} [startMsgId] **附加属性：用户可以查看的最早的消息ID
+   * @apiSuccess {Number} [endMsgId] **附加属性：用户可以查看的最新的消息ID
    */
   router.post('/api/session', createSession);
   router.put('/api/session', createSession);

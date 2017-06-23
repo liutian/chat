@@ -29,23 +29,21 @@ exports.isObject = function (value) { return objProToString.call(value) == '[obj
 
 /*------------------------------------分割线 -----------------------------*/
 
-function pickFn(data, schema, extraKeys) {
+function pickFn(data, extraKeys, ) {
   let newData = {};
-  if (util.isString(schema)) {
-    extraKeys = schema;
-    schema = null;
+  if (util.isString(extraKeys)) {
     Object.keys(data).forEach(function (key) {
       if (extraKeys.includes('**') || extraKeys.includes(key)) {
-        newData[key] = data[key];
+        newData[key] = key.endsWith('%') ? +data[key.substr(0, key.length - 1)] : data[key];
       }
       if (extraKeys.includes('-' + key)) {
         delete newData[key];
       }
     })
-  } else if (util.isObject(schema)) {
+  } else if (util.isObject(extraKeys)) {
     Object.keys(data).forEach(function (key) {
-      if (key in schema || (extraKeys && extraKeys.includes(key) && !extraKeys.includes('-' + key))) {
-        newData[key] = data[key];
+      if (key in extraKeys || (arguments[2] && arguments[2].includes(key) && !arguments[2].includes('-' + key))) {
+        newData[key] = key.endsWith('%') ? +data[key.substr(0, key.length - 1)] : data[key];
       }
     })
   }
@@ -81,12 +79,12 @@ async function mkdirFn(dirname) {
 
 function formatDateFn(date, format) {
   if (!date) date = new Date();
-  if (!format) format = 'MM-dd HH:mm:ss';
+  if (!format) format = 'yyyy-MM-dd HH:mm:ss';
 
   return format.replace('yyyy', date.getFullYear())
-    .replace('MM', date.getMonth())
-    .replace('dd', date.getDate())
-    .replace('HH', date.getHours())
-    .replace('mm', date.getMinutes())
-    .replace('ss', date.getSeconds());
+    .replace('MM', (date.getMonth() + '').padStart(2, '0'))
+    .replace('dd', (date.getDate() + '').padStart(2, '0'))
+    .replace('HH', (date.getHours() + '').padStart(2, '0'))
+    .replace('mm', (date.getMinutes() + '').padStart(2, '0'))
+    .replace('ss', (date.getSeconds() + '').padStart(2, '0'));
 }

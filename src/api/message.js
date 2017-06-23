@@ -108,7 +108,9 @@ async function saveMessage(ctx, next) {
   } else {
     ctx.request.body.from = ctx.session.user.refKey;
     ctx.request.body.appId = ctx.session.user.appId;
-    ctx.body = await messageService.sendMessage(ctx.request.body);
+    let msg = await messageService.sendMessage(ctx.request.body);
+    if (msg) msg.from = ctx.session.user;
+    ctx.body = msg;
   }
 }
 

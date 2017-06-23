@@ -27,6 +27,9 @@ async function listFn(data) {
   if (!data.refKey) apiError.throw('refKey cannot be empty');
   if (!data.appId) apiError.throw('appId cannot be empty');
   if (!data.sessionId) apiError.throw('sessionId cannot be empty');
+  if (data.latestMessageId) data.latestMessageId = +data.latestMessageId;
+  if (data.type) data.type = +data.type;
+  if (data.contentType) data.contentType = +data.contentType;
 
   //首先查看sessionInfo，判断用户是否可以查看会话中的消息
   let sessionInfo = await sessionInfoModal.findOne({
@@ -55,23 +58,22 @@ async function listFn(data) {
   } else {
     query.del = 0;
     query.msgId = { $gte: sessionInfo.startMsgId };
-    if (data.latestMessageId && data.latestMessageId < sessionInfo.endMsgId) {
+    if (data.latestMessageId) {
       query.msgId.$lt = data.latestMessageId;
-    } else {
-      query.msgId.$lte = sessionInfo.endMsgId;
     }
+    query.msgId.$lte = sessionInfo.endMsgId;
   };
   //可以根据消息类型查询
   if (Array.isArray(data.type)) {
     query.type = { $in: data.type.map(v => +v) };
-  } else if (Number.isInteger(+data.type)) {
-    query.type = +data.type;
+  } else if (Number.isInteger(data.type)) {
+    query.type = data.type;
   }
   //可以根据消息内容类型查询
   if (Array.isArray(data.contentType)) {
     query.contentType = { $in: data.contentType.map(v => +v) };
-  } else if (Number.isInteger(+data.contentType)) {
-    query.contentType = +data.contentType;
+  } else if (Number.isInteger(data.contentType)) {
+    query.contentType = data.contentType;
   }
 
   if (!util.isNumber(query.msgId.$gte)) delete query.msgId.$gte;
@@ -85,10 +87,15 @@ async function listFn(data) {
   let returnMessageList = [];
   for (let i = 0; i < messageList.length; i++) {
     let msg = messageList[i].obj;
-    if (!fromMap[msg.from] && msg.anonymously != 1) {
+    //准备from数据
+    if (msg.from && !fromMap[msg.from] && msg.anonymously != 1) {
       fromMap[msg.from] = await userService.get(msg.from, data.appId);
     }
-    msg.from = fromMap[msg.from];
+    //使用from数据
+    if (msg.from) {
+      msg.from = fromMap[msg.from];
+    }
+    if (!msg.from) msg.from = {};
 
     if (msg.anonymously == 1) {
       msg.from.nickname = '匿名';

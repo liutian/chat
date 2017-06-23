@@ -306,6 +306,9 @@ async function listHistoryFn(data) {
   if (!data.appId) apiError.throw('appId cannot be empty');
   if (data.searchAll) data.searchAll = +data.searchAll;
 
+  let user = await userService.get(data.refKey, data.appId);
+  if (!user) apiError.throw('curr user cannot find');
+
   //每次都查出来所有关联的会话，然后在进行筛选
   let query = { refKey: data.refKey, appId: data.appId };
   let sessionInfoList = await sessionInfoModel.find(query);
@@ -321,9 +324,19 @@ async function listHistoryFn(data) {
     let session = sessionList[i].obj;
     Object.assign(session, _util.pick(sessionInfoMap[session.id], '** -sessionId -id'));
 
+    if (session.latestMessage) {
+      if (session.latestMessage.from && session.latestMessage.from != data.refKey) {
+        let fromUser = await userService.get(session.latestMessage.from, data.appId);
+        session.latestMessage.from = fromUser;
+      } else {
+        session.latestMessage.from = user;
+      }
+    } else {
+      session.latestMessage = { from: user };
+    }
+
     //默认只查询会话中最新消息时间比clearDate大的会话
-    if (data.searchAll != 1 && session.clearDate && (!session.latestMessage || (session.latestMessage && session.latestMessage.createdAt
-      && session.latestMessage.createdAt.getTime() <= session.clearDate.getTime()))) continue;
+    if (data.searchAll != 1 && session.clearDate && session.latestMessage.createdAt && session.latestMessage.createdAt.getTime() <= session.clearDate.getTime()) continue;
 
     if (session.secret == 1 && session.secretKey) {
       let other;
@@ -348,13 +361,10 @@ async function listHistoryFn(data) {
       }
     }
 
-    if (session.secret != 1 && session.latestMessage && session.latestMessage.from) {
-      let fromUser = await userService.get(session.latestMessage.from, data.appId);
-      session.latestMessage.from = fromUser.obj;
-    }
-
-    if (session.latestMessage) {
+    if (session.latestMessage.createdAt) {
       session.latestMessage.createdAt = _util.formatDate(session.latestMessage.createdAt);
+    }
+    if (session.latestMessage.updatedAt) {
       session.latestMessage.updatedAt = _util.formatDate(session.latestMessage.updatedAt);
     }
 
@@ -403,6 +413,11 @@ async function createFn(data) {
       secretKey: secretKey
     }, '-latestMessage');
     if (_session) {
+      //填充会话name
+      if (_session.secret == 1 && !_session.name) {
+        let otherUser = await userService.get(otherId, data.appId);
+        _session.name = otherUser.nickname;
+      }
       return _session.obj;
     }
 
@@ -437,6 +452,11 @@ async function createFn(data) {
   //处理邀请加入操作
   if (oldData.members && oldData.members.length > 0) {
     await _enter(app, newSession, oldData.members, founder, 1);
+    //填充会话name属性
+    if (newSession.secret == 1) {
+      let otherUser = await userService.get(oldData.members[0].id, data.appId);
+      newSession.name = otherUser.nickname;
+    }
   }
 
   try {
@@ -445,7 +465,9 @@ async function createFn(data) {
     logger.error(`enter session id:${newSession.id} fail for transferMember -> founder`);
   }
 
-  return newSession.obj;
+  let result = newSession.obj;
+  if (!result.name && newSession.name) result.name = newSession.name;
+  return result;
 }
 
 function createSecretKeyFn(refKey1, refKey2) {
@@ -788,10 +810,12 @@ async function updateSessionForMemberChange(app, session) {
         otherNicknameList.push(other.nickname);
       }
     }
+    let sessionName = otherNicknameList.join('、').substr(0, 100);
     await sessionModel.findByIdAndUpdate(session.id, {
-      name: otherNicknameList.join('、').substr(0, 100),
+      name: sessionName,
       memberCount: memberCount
     }, { runValidators: true });
+    session.name = sessionName;
   } else {
     await sessionModel.findByIdAndUpdate(session.id, {
       memberCount: memberCount
@@ -867,7 +891,8 @@ async function updateSessionInfo(appId, session, members, historyView) {
       stick: 0,
       outside: 0,
       endMsgId: null,
-      secret: session.secret
+      secret: session.secret,
+      sessionType: session.type
     };
     //historyView = 1 可以查看加入会话之前的消息
     if (historyView !== 1) {
