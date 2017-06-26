@@ -139,7 +139,8 @@ async function _exit(members, session, app, user) {
     sessionId: session.id,
     appId: app.id,
     from: user.refKey,
-    content: nicknameStr,
+    content: '{}',
+    textContent: nicknameStr,
     type: msgType,
     fromSys: 1,
     apnsName: app.apnsName,
@@ -606,6 +607,7 @@ async function indirectEnter(data, app, from, sysMsg, session) {
       pushData: message,
       pushAuth: app.pushAuth,
       apnsName: app.apnsName,
+      textContent: '邀请被拒绝',
       leaveMessage: 1
     });
   } else if (sysMsg.type == 16) {
@@ -616,6 +618,7 @@ async function indirectEnter(data, app, from, sysMsg, session) {
       pushData: message,
       pushAuth: app.pushAuth,
       apnsName: app.apnsName,
+      textContent: '邀请他人被管理员拒绝',
       leaveMessage: 1
     });
   } else if (sysMsg.type == 17) {
@@ -626,6 +629,7 @@ async function indirectEnter(data, app, from, sysMsg, session) {
       pushData: message,
       pushAuth: app.pushAuth,
       apnsName: app.apnsName,
+      textContent: '加入会话被拒绝',
       leaveMessage: 1
     });
   }
@@ -667,6 +671,7 @@ async function directEnter(data, currUser, app, session) {
         message.sessionId = admin.sysSessionId;
         message.type = 16;
         message.content = JSON.stringify({ refKey: data.members[0].id, fromRefKey: currUser.refKey });
+        message.textContent = '邀请审核';
         //生成系统消息
         let newMessage = await messageService.storeMessage(message, {
           room: admin.sysSessionId,
@@ -689,6 +694,7 @@ async function directEnter(data, currUser, app, session) {
         let admin = await userService.get(adminRefKey, data.appId);
         if (!admin) apiError.throw(`session admin (refKey:${adminRefKey}) cannot find`);
         message.content = JSON.stringify({ refKey: currUser.refKey, fromRefKey: currUser.refKey });
+        message.textContent = '加入审核';
         message.sessionId = admin.sysSessionId;
         message.type = 17;
         //生成系统消息
@@ -763,7 +769,8 @@ async function _enter(app, session, members, from, historyView) {
     sessionId: session.id,
     appId: app.id,
     from: from.refKey,
-    content: prefix + nicknameStr + ' 加入聊天',
+    textContent: prefix + nicknameStr + ' 加入聊天',
+    content: '{}',
     type: msgType,
     fromSys: 1,
     apnsName: app.apnsName,
@@ -845,6 +852,7 @@ async function inviteAgree(app, from, members, session) {
         appId: app.id,
         from: app.simUser,
         content: JSON.stringify({ refKey: member.id, fromRefKey: from.refKey }),
+        textContent: '会话邀请',
         type: 15,
         fromSys: 1,
         apnsName: app.apnsName,
@@ -943,40 +951,47 @@ async function parseMembersFn(members, maxMemberCount) {
 
 async function createSysMsg(data, msg, pushObj) {
   msg.createdAt = new Date();
-  msg.content = '修改会话信息';
+  msg.content = '{}';
   pushObj.pushData = msg;
   if (util.isString(data.name)) {
     msg.type = 3;
+    msg.textContent = '管理员更新了会话名称';
     await messageService.storeMessage(msg, pushObj);
   }
 
   if (util.isString(data.des)) {
     msg.type = 13;
+    msg.textContent = '管理员更新了会话描述';
     await messageService.storeMessage(msg, pushObj);
   }
 
   if (util.isNumber(data.mute)) {
     msg.type = 9;
+    msg.textContent = '管理员设置禁止发言';
     await messageService.storeMessage(msg, pushObj);
   }
 
   if (util.isNumber(data.lock)) {
     msg.type = 10;
+    msg.textContent = '管理员锁定了会话';
     await messageService.storeMessage(msg, pushObj);
   }
 
   if (util.isNumber(data.del)) {
     msg.type = 14;
+    msg.textContent = '管理员关闭了会话';
     await messageService.storeMessage(msg, pushObj);
   }
 
   if (util.isString(data.owner)) {
     msg.type = 11;
+    msg.textContent = '管理员变更会话所有者';
     await messageService.storeMessage(msg, pushObj);
   }
 
   if (util.isString(data.notice)) {
     msg.type = 12;
+    msg.textContent = '管理员更新了公告';
     await messageService.storeMessage(msg, pushObj);
   }
 
