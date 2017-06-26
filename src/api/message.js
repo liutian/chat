@@ -17,6 +17,22 @@ module.exports = function (router) {
    * @api {post} /api/message 发送消息[客户端]
    * @apiName send message
    * @apiGroup message
+   * @apiExample 消息content字段描述
+   * title			//对应图文类型的标题
+   * content			//对于纯文本类型的text，或者图文的描述
+   * resourceUrl		//资源Url,对应多媒体资源地址
+   * coverUrl		//多媒体预览封面图
+   * duration		//多媒体播放时长
+   * linkUrl			//图文链接地址
+   * imageSize: {w: ,h:}	//图片尺寸
+   * location: {lng: ,lat:}	//经纬度
+   * rejectReason   //审批拒绝的原因[用于审批流程]
+   * fromRefKey     //原始用户[用于审批流程]
+   * refKey         //目标用户[用于审批流程]
+   *
+   * @apiExample 系统消息推送说明
+   * 被邀请加入，被踢出会话，被邀请需要本人同意 三种情况 会单独发送离线推送
+   * 除上述的三种情况的系统推送外的其他系统推送均采用实时推送
    *
    * @apiUse client_auth
    *
