@@ -195,16 +195,18 @@ async function storeMessageFn(msg, pushObj) {
   msg.sessionSecret = newSession.secret;
   let newMsg = await messageModal.create(msg);
 
-  //推送消息
-  pushService.push(pushObj).then(function () {
-    messageModal.findByIdAndUpdate(newMsg.id, { pushResult: 'ok' }, function (err) {
-      if (err) logger.error(`store message:${newMsg.id} push ok result fail `);
+  if (pushObj) {
+    //推送消息
+    pushService.push(pushObj).then(function () {
+      messageModal.findByIdAndUpdate(newMsg.id, { pushResult: 'ok' }, function (err) {
+        if (err) logger.error(`store message:${newMsg.id} push ok result fail `);
+      });
+    }).catch(function (err) {
+      messageModal.findByIdAndUpdate(newMsg.id, { pushResult: err }, function (err) {
+        if (err) logger.error('store message:${newMsg.id} push err result fail');
+      });
     });
-  }).catch(function (err) {
-    messageModal.findByIdAndUpdate(newMsg.id, { pushResult: err }, function (err) {
-      if (err) logger.error('store message:${newMsg.id} push err result fail');
-    });
-  });
+  }
 
   return newMsg;
 }
