@@ -9,6 +9,7 @@ const apiError = require('../util/api-error');
 const _util = require('../util/util');
 const appService = require('./app-service');
 const messageService = require('./message-service');
+const pushService = require('./push-service');
 const userService = require('./user-service');
 const letter = require('../util/letter');
 const config = require('../config');
@@ -99,8 +100,10 @@ async function _exit(members, session, app, user) {
   let memberList = await userModel.find({
     refKey: { $in: members },
     appId: app.id
-  }, 'nickname');
+  }, 'nickname refKey sysSessionId');
   if (memberList.length <= 0) return;
+
+  let selfExit = memberList.length == 0 && memberList[0].refKey == user.refKey;
 
   let updater = { outside: 1, endMsgId: session.msgMaxCount };
   if (members.length == 1 && members[0] == user.refKey) {
@@ -125,13 +128,6 @@ async function _exit(members, session, app, user) {
 
 
   let nicknameStr = memberList.map(v => v.nickname).join('、');
-  let msgType = 7;
-  if (members.length > 1) {
-    nicknameStr += ' 被踢出会话';
-  } else if (members.length == 1) {
-    msgType = 6;
-    nicknameStr += ' 退出会话'
-  }
 
   //初始化新消息
   let message = {
@@ -139,8 +135,8 @@ async function _exit(members, session, app, user) {
     appId: app.id,
     from: user.refKey,
     content: '{}',
-    textContent: nicknameStr,
-    type: msgType,
+    textContent: nicknameStr + (selfExit ? ' 退出会话' : ' 被踢出会话'),
+    type: selfExit ? 6 : 7,
     fromSys: 1,
     apnsName: app.apnsName,
     leaveMessage: 1,
@@ -152,8 +148,25 @@ async function _exit(members, session, app, user) {
     pushData: message,
     pushAuth: app.pushAuth,
     apnsName: app.apnsName,
-    leaveMessage: 1
+    leaveMessage: 0
   });
+
+  if (!selfExit) {
+    for (let i = 0; i < memberList.length; i++) {
+      let member = memberList[i];
+      try {
+        pushService.push({
+          room: member.sysSessionId,
+          pushData: message,
+          pushAuth: app.pushAuth,
+          apnsName: app.apnsName,
+          leaveMessage: 1
+        });
+      } catch (e) {
+        logger.error(`exit session push fail ${e}`);
+      }
+    }
+  }
 
   try {
     _transferMember(app.pushAuth, members, session.id, 'leave');
@@ -752,20 +765,15 @@ async function _enter(app, session, members, from, historyView) {
   await updateSessionForMemberChange(app, session);
 
   let nicknameStr = noAgreeMembers.map(v => v.nickname).join('、');
-  let prefix = '';
-  let msgType = 4;
-  if (noAgreeMembers.length > 1 || noAgreeMembers[0].refKey != from.refKey) {
-    prefix = from.nickname + ' 邀请 ';
-    msgType = 5;
-  }
+  let selfEnter = noAgreeMembers.length == 1 && noAgreeMembers[0].refKey == from.refKey;
   //初始化新消息
   let message = {
     sessionId: session.id,
     appId: app.id,
     from: from.refKey,
-    textContent: prefix + nicknameStr + ' 加入聊天',
+    textContent: (!selfEnter ? from.nickname + ' 邀请 ' : '') + nicknameStr + ' 加入聊天',
     content: '{}',
-    type: msgType,
+    type: selfEnter ? 4 : 5,
     fromSys: 1,
     apnsName: app.apnsName,
     leaveMessage: 1,
@@ -777,8 +785,21 @@ async function _enter(app, session, members, from, historyView) {
     pushData: message,
     pushAuth: app.pushAuth,
     apnsName: app.apnsName,
-    leaveMessage: 1
+    leaveMessage: 0
   });
+
+  if (!selfEnter) {
+    for (let i = 0; i < array.length; i++) {
+      let member = noAgreeMembers[i];
+      pushService.push({
+        room: member.sysSessionId,
+        pushData: message,
+        pushAuth: app.pushAuth,
+        apnsName: app.apnsName,
+        leaveMessage: 1
+      });
+    }
+  }
 
   try {
     _transferMember(app.pushAuth, noAgreeMembers.map(v => v.refKey), session.id, 'enter');

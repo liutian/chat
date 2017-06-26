@@ -17,7 +17,7 @@ exports.push = pushFn;
  * @param {*} data
  * @param {*} {room: string,pushData: any,pushAuth: string,apnsName: string,leaveMessage: boolean}
  */
-function pushFn(data, leaveMessage) {
+function pushFn(data) {
   if (!data || !data.room || !data.pushData) {
     apiError.throw('推送参数错误');
   }
