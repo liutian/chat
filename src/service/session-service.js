@@ -282,7 +282,12 @@ async function updateFn(data) {
       from: oldData.refKey,
       fromSys: 1,
       apnsName: app.apnsName
-    });
+    }, {
+        room: oldData.sessionId,
+        pushAuth: app.pushAuth,
+        apnsName: app.apnsName,
+        leaveMessage: 0
+      });
   }
 }
 
@@ -964,49 +969,50 @@ async function parseMembersFn(members, maxMemberCount) {
   return newMembers;
 }
 
-async function createSysMsg(data, msg) {
+async function createSysMsg(data, msg, pushObj) {
   msg.createdAt = new Date();
   msg.content = '{}';
+  pushObj.pushData = msg;
   if (util.isString(data.name)) {
     msg.type = 3;
     msg.textContent = '管理员更新了会话名称';
-    await messageService.storeMessage(msg);
+    await messageService.storeMessage(msg, pushObj);
   }
 
   if (util.isString(data.des)) {
     msg.type = 13;
     msg.textContent = '管理员更新了会话描述';
-    await messageService.storeMessage(msg);
+    await messageService.storeMessage(msg, pushObj);
   }
 
   if (util.isNumber(data.mute)) {
     msg.type = 9;
     msg.textContent = '管理员设置禁止发言';
-    await messageService.storeMessage(msg);
+    await messageService.storeMessage(msg, pushObj);
   }
 
   if (util.isNumber(data.lock)) {
     msg.type = 10;
     msg.textContent = '管理员锁定了会话';
-    await messageService.storeMessage(msg);
+    await messageService.storeMessage(msg, pushObj);
   }
 
   if (util.isNumber(data.del)) {
     msg.type = 14;
     msg.textContent = '管理员关闭了会话';
-    await messageService.storeMessage(msg);
+    await messageService.storeMessage(msg, pushObj);
   }
 
   if (util.isString(data.owner)) {
     msg.type = 11;
     msg.textContent = '管理员变更会话所有者';
-    await messageService.storeMessage(msg);
+    await messageService.storeMessage(msg, pushObj);
   }
 
   if (util.isString(data.notice)) {
     msg.type = 12;
     msg.textContent = '管理员更新了公告';
-    await messageService.storeMessage(msg);
+    await messageService.storeMessage(msg, pushObj);
   }
 
 }
