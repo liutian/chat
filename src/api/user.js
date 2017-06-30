@@ -187,6 +187,7 @@ async function findUser(ctx, next) {
 
 
 async function pushOnlineAuth(ctx, next) {
+  ctx.query.appId = ctx.query.appid || ctx.query.appId;
   let sessionIdList = await userService.pushOnlineAuth(ctx.request.query);
   ctx.body = { rooms: sessionIdList };
 }

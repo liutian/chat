@@ -82,7 +82,7 @@ function formatDateFn(date, format) {
   if (!format) format = 'yyyy-MM-dd HH:mm:ss';
 
   return format.replace('yyyy', date.getFullYear())
-    .replace('MM', (date.getMonth() + '').padStart(2, '0'))
+    .replace('MM', ((date.getMonth() + 1) + '').padStart(2, '0'))
     .replace('dd', (date.getDate() + '').padStart(2, '0'))
     .replace('HH', (date.getHours() + '').padStart(2, '0'))
     .replace('mm', (date.getMinutes() + '').padStart(2, '0'))

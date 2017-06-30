@@ -38,7 +38,7 @@ module.exports = function (router) {
    *
    * @apiParam {String} sessionId 会话ID
    * @apiParam {Object} content 消息内容
-   * @apiParam {String} [textContent] 消息纯文本,推送时使用
+   * @apiParam {String} [textContent] 消息纯文本,非系统消息由调用方填充该值,如果是系统消息该字段由服务器填充,ios推送时会取该字段作为alert，如果该字段没有值则alert为空
    * @apiParam {Number} [contentType] 消息内容类型 1:纯文本 2:图文 3:图片 4:语音 5:文件 6:视频 7:位置
    * @apiParam {String} [apnsName] apns推送时使用的证书
    * @apiParam {String} [leaveMessage] 是否保存离线数据,如果不保留则ios不会收到apns推送信息

@@ -135,7 +135,7 @@ async function sendMessageFn(data) {
   let createdAt = new Date();
 
   //校验会话信息
-  let session = await sessionModel.findById(data.sessionId, 'owner admins mute appId del lock anonymously');
+  let session = await sessionModel.findById(data.sessionId, 'owner admins mute appId del lock anonymously secret secretKey');
   if (!session) apiError.throw('session does not exist');
   if (session.lock == 1) apiError.throw(1020);
   if (session.del == 1) apiError.throw(1021);
@@ -153,13 +153,19 @@ async function sendMessageFn(data) {
   data.updatedAt = createdAt;
   data.createdAt = createdAt;
 
+  let room = data.sessionId;
+  if (session.secret == 1) {
+    if (!session.secretKey) apiError.throw('send message -- session secret lose');
+    let refKeyArr = session.secretKey.split('::');
+    room = 'user_' + (refKeyArr[0] == data.from ? refKeyArr[1] : refKeyArr[0]);
+  }
+
   let newMsg = await storeMessageFn(data, {
-    room: data.sessionId,
-    pushData: data,
+    room: room,
     pushAuth: app.pushAuth,
     apnsName: util.isString(data.apnsName) ? data.apnsName : app.pushApnsName,
     leaveMessage: data.leaveMessage
-  });
+  }, _util.pick(user, 'avator nickname refKey'));
 
   //校验是否有权发消息
   let sessionInfo = await sessionInfoModal.findOneAndUpdate({
@@ -175,15 +181,23 @@ async function sendMessageFn(data) {
 
 
 
-async function storeMessageFn(msg, pushObj) {
+async function storeMessageFn(msg, pushObj, pushDataFrom) {
+  let msgDate = new Date();
   let updater = {
     $inc: { msgMaxCount: 1 },
     $set: {
       latestMessage: msg
     }
   }
+
   if (msg.fromSys != 1) {
     updater.$inc.messageMaxCount = 1;
+  }
+  if (!msg.updatedAt) {
+    msg.updatedAt = msgDate;
+  }
+  if (!msg.createdAt) {
+    msg.createdAt = msgDate;
   }
   let newSession = await sessionModel.findByIdAndUpdate(msg.sessionId, updater, {
     new: true, runValidators: true
@@ -196,6 +210,8 @@ async function storeMessageFn(msg, pushObj) {
   let newMsg = await messageModal.create(msg);
 
   if (pushObj) {
+    if (!pushObj.pushData) pushObj.pushData = newMsg.obj;
+    if (pushDataFrom) pushObj.pushData.from = pushDataFrom;
     //推送消息
     pushService.push(pushObj).then(function () {
       messageModal.findByIdAndUpdate(newMsg.id, { pushResult: 'ok' }, function (err) {

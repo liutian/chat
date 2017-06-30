@@ -220,11 +220,11 @@ async function listFn(data) {
 async function pushOnlineAuthFn(data) {
   if (!data.userid) apiError.throw('userid cannot be empty');
   if (!data.token) apiError.throw('token cannot be empty');
-  if (!data.appid) apiError.throw('appid cannot be empty');
+  if (!data.appId) apiError.throw('appId cannot be empty');
 
   let user = await userModel.findOne({
     refKey: data.userid,
-    appId: data.appid,
+    appId: data.appId,
     token: data.token
   }, 'appId refKey tokenExpiry lock del');
 

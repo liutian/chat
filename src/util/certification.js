@@ -49,9 +49,9 @@ exports.client = async function clientCert(ctx, next) {
   //客户端携带该字段进行接口访问
   //服务器会在没有session或者session失效后提前该字段进行权限校验
   //该字段必须不能为空，给负载均衡提供hash值
-  let refKey = ctx.get('RefKey');
-  let token = ctx.get('Token');
-  let appId = ctx.get('AppId');
+  let refKey = ctx.get('RefKey') || ctx.query.refKey;
+  let token = ctx.get('Token') || ctx.query.token;
+  let appId = ctx.get('AppId') || ctx.query.appid;
   if (!refKey || !token || !appId) {
     ctx.throw(401, { code: 1007 });
   }

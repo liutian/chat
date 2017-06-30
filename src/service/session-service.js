@@ -103,10 +103,10 @@ async function _exit(members, session, app, user) {
   }, 'nickname refKey sysSessionId');
   if (memberList.length <= 0) return;
 
-  let selfExit = memberList.length == 0 && memberList[0].refKey == user.refKey;
+  let selfExit = memberList.length == 1 && memberList[0].refKey == user.refKey;
 
   let updater = { outside: 1, endMsgId: session.msgMaxCount };
-  if (members.length == 1 && members[0] == user.refKey) {
+  if (selfExit) {
     updater.clearDate = new Date();
   }
   await sessionInfoModel.update({
@@ -145,19 +145,21 @@ async function _exit(members, session, app, user) {
   //生成系统消息
   let newMessage = await messageService.storeMessage(message, {
     room: session.id,
-    pushData: message,
     pushAuth: app.pushAuth,
     apnsName: app.apnsName,
     leaveMessage: 0
   });
 
   if (!selfExit) {
+    let pushData = newMessage.obj;
+    pushData.from = { refKey: pushData.from };
+
     for (let i = 0; i < memberList.length; i++) {
       let member = memberList[i];
       try {
         pushService.push({
           room: member.sysSessionId,
-          pushData: message,
+          pushData: pushData,
           pushAuth: app.pushAuth,
           apnsName: app.apnsName,
           leaveMessage: 1
@@ -349,7 +351,8 @@ async function listHistoryFn(data) {
     }
 
     //默认只查询会话中最新消息时间比clearDate大的会话
-    if (data.searchAll != 1 && session.clearDate && session.latestMessage.createdAt && session.latestMessage.createdAt.getTime() <= session.clearDate.getTime()) continue;
+    if (data.searchAll != 1 && session.clearDate && session.latestMessage.createdAt
+      && session.latestMessage.createdAt.getTime() <= session.clearDate.getTime()) continue;
 
     if (session.secret == 1 && session.secretKey) {
       let other;
@@ -464,7 +467,17 @@ async function createFn(data) {
 
   //处理邀请加入操作
   if (oldData.members && oldData.members.length > 0) {
-    await _enter(app, newSession, oldData.members, founder, 1);
+    try {
+      await _enter(app, newSession, oldData.members, founder, 1);
+    } catch (e) {//如果保持直接回滚
+      await sessionInfoModel.remove({
+        sessionId: newSession.id,
+        refKey: founder.refKey,
+        appId: data.appId
+      });
+      await sessionModel.findByIdAndRemove(newSession.id);
+      throw e;
+    }
     //填充会话name属性
     if (newSession.secret == 1) {
       let otherUser = await userService.get(oldData.members[0].id, data.appId);
@@ -616,7 +629,6 @@ async function indirectEnter(data, app, from, sysMsg, session) {
     //生成系统消息
     let newMessage = await messageService.storeMessage(message, {
       room: user.sysSessionId,
-      pushData: message,
       pushAuth: app.pushAuth,
       apnsName: app.apnsName,
       textContent: '邀请被拒绝',
@@ -627,7 +639,6 @@ async function indirectEnter(data, app, from, sysMsg, session) {
     //生成系统消息
     let newMessage = await messageService.storeMessage(message, {
       room: user.sysSessionId,
-      pushData: message,
       pushAuth: app.pushAuth,
       apnsName: app.apnsName,
       textContent: '邀请他人被管理员拒绝',
@@ -638,7 +649,6 @@ async function indirectEnter(data, app, from, sysMsg, session) {
     //生成系统消息
     let newMessage = await messageService.storeMessage(message, {
       room: user.sysSessionId,
-      pushData: message,
       pushAuth: app.pushAuth,
       apnsName: app.apnsName,
       textContent: '加入会话被拒绝',
@@ -687,7 +697,6 @@ async function directEnter(data, currUser, app, session) {
         //生成系统消息
         let newMessage = await messageService.storeMessage(message, {
           room: admin.sysSessionId,
-          pushData: message,
           pushAuth: app.pushAuth,
           apnsName: app.apnsName,
           leaveMessage: 1
@@ -712,7 +721,6 @@ async function directEnter(data, currUser, app, session) {
         //生成系统消息
         let newMessage = await messageService.storeMessage(message, {
           room: admin.sysSessionId,
-          pushData: message,
           pushAuth: app.pushAuth,
           apnsName: app.apnsName,
           leaveMessage: 1
@@ -781,24 +789,25 @@ async function _enter(app, session, members, from, historyView) {
     type: selfEnter ? 4 : 5,
     fromSys: 1,
     apnsName: app.apnsName,
-    leaveMessage: 1,
-    createdAt: new Date()
+    leaveMessage: 1
   }
   //生成系统消息
   let newMessage = await messageService.storeMessage(message, {
     room: session.id,
-    pushData: message,
     pushAuth: app.pushAuth,
     apnsName: app.apnsName,
     leaveMessage: 0
   });
 
   if (!selfEnter) {
-    for (let i = 0; i < array.length; i++) {
+    let pushData = newMessage.obj;
+    pushData.from = { refKey: pushData.from };
+
+    for (let i = 0; i < noAgreeMembers.length; i++) {
       let member = noAgreeMembers[i];
       pushService.push({
         room: member.sysSessionId,
-        pushData: message,
+        pushData: pushData,
         pushAuth: app.pushAuth,
         apnsName: app.apnsName,
         leaveMessage: 1
@@ -883,7 +892,6 @@ async function inviteAgree(app, from, members, session) {
       //生成系统消息
       let newMessage = await messageService.storeMessage(message, {
         room: user.sysSessionId,
-        pushData: message,
         pushAuth: app.pushAuth,
         apnsName: app.apnsName,
         leaveMessage: 1
@@ -926,11 +934,11 @@ async function updateSessionInfo(appId, session, members, historyView) {
     if (historyView !== 1) {
       updater.startMsgId = session.msgMaxCount + 1;
     }
-    let up = await sessionInfoModel.update({
+    await sessionInfoModel.update({
       sessionId: session.id,
       refKey: user.refKey,
       appId: appId
-    }, updater, { upsert: true });
+    }, updater, { upsert: true, runValidators: true });
   }
 
   return updateCount;
@@ -972,7 +980,6 @@ async function parseMembersFn(members, maxMemberCount) {
 async function createSysMsg(data, msg, pushObj) {
   msg.createdAt = new Date();
   msg.content = '{}';
-  pushObj.pushData = msg;
   if (util.isString(data.name)) {
     msg.type = 3;
     msg.textContent = '管理员更新了会话名称';
