@@ -208,7 +208,7 @@ module.exports = function (router) {
    * @apiSuccess {Date} speakDate 用户最后一次发言时间
    * @apiSuccess {Number} stick 该回合是否置顶
    * @apiSuccess {Number} quiet 是否开启消息免打扰,暂时只是用来显示不用来逻辑判断
-   * @apiSuccess {Date} clearDate 用户主动清除会话时的时间
+   * @apiSuccess {Number} clearMsgId 用户主动清除会话时会话最新的消息ID
    * @apiSuccess {Number} outside 退出会话时该字段为1
    * @apiSuccess {String} otherRemark 私聊时用户可以备注对方,该字段有对方修改自己不能修改
    *

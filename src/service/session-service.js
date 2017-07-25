@@ -107,7 +107,7 @@ async function _exit(members, session, app, user) {
 
   let updater = { outside: 1, endMsgId: session.msgMaxCount };
   if (selfExit) {
-    updater.clearDate = new Date();
+    updater.clearMsgId = session.msgMaxCount + 1;
   }
   await sessionInfoModel.update({
     appId: app.id,
@@ -185,12 +185,14 @@ async function updateSessionInfoFn(data) {
   if (!data.sessionId) apiError.throw('sessionId cannot be empty');
   data = _util.pick(data, 'nickname background stick quiet otherRemark');
 
+  let session = await sessionModel.findById(oldData.sessionId, 'msgMaxCount');
   if (oldData.clearMsg == 1) {
-    let session = await sessionModel.findById(oldData.sessionId, 'msgMaxCount');
     data.startMsgId = session.msgMaxCount + 1;
   }
 
-  if (oldData.remove == 1) data.clearDate = new Date();
+  if (oldData.remove == 1) {
+    data.clearMsgId = session.msgMaxCount;
+  }
   await sessionInfoModel.findOneAndUpdate({
     sessionId: oldData.sessionId,
     appId: oldData.appId,
@@ -304,7 +306,7 @@ async function detailFn(data) {
     sessionId: data.sessionId,
     refKey: data.refKey,
     appId: data.appId
-  }, 'startMsgId endMsgId nickname background joinDate speakDate stick quiet clearDate outside');
+  }, 'startMsgId endMsgId nickname background joinDate speakDate stick quiet clearMsgId outside');
   if (!sessionInfo) apiError.throw('sessionInfo cannot find');
   let session = await sessionModel.findById(data.sessionId, '-latestMessage');
   if (!session) apiError.throw('session cannot find');
@@ -350,9 +352,8 @@ async function listHistoryFn(data) {
       session.latestMessage = { from: user };
     }
 
-    //默认只查询会话中最新消息时间比clearDate大的会话
-    if (data.searchAll != 1 && session.clearDate && session.latestMessage.createdAt
-      && session.latestMessage.createdAt.getTime() <= session.clearDate.getTime()) continue;
+    //默认只查询会话中最新消息ID比clearMsgId大的会话
+    if (data.searchAll != 1 && session.msgMaxCount <= session.clearMsgId) continue;
 
     if (session.secret == 1 && session.secretKey) {
       let other;
@@ -923,7 +924,7 @@ async function updateSessionInfo(appId, session, members, historyView) {
 
     let updater = {
       joinDate: new Date(),
-      clearDate: null,
+      clearMsgId: (session.msgMaxCount || 1) - 1,
       stick: 0,
       outside: 0,
       endMsgId: null,

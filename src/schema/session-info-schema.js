@@ -32,7 +32,7 @@ const sessionInfoSchema = new Schema({
     max: 1,
     default: 0
   },
-  clearDate: { type: Date },//用户主动清除会话时的时间
+  clearMsgId: { type: Number, min: 0, default: 0 },//用户主动清除会话时会话最新的消息ID
   outside: {//退出会话时该字段为1
     type: Number,
     min: 0,

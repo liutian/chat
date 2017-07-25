@@ -75,7 +75,6 @@ async function createSysSessionFn(appId, refKey, simUser) {
     appId: appId,
     del: 0,
     joinDate: new Date(),
-    clearDate: new Date(),
     stick: 0,
     outside: 0,
     secret: 1,
