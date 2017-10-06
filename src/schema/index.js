@@ -44,11 +44,10 @@ if (Array.isArray(mongo_url)) {
 
 //连接数据库
 mongoose.connect(mongo_url, {
-  server: {
-    poolSize: config.mongo_pool,
-    socketOptions: { keepAlive: 100 },
-    promiseLibrary: global.Promise
-  }
+  useMongoClient: true,
+  poolSize: config.mongo_pool,
+  keepAlive: 100,
+  promiseLibrary: global.Promise
 }, function (err) {
   if (err) {
     logger.error('mongo connection error', err);
