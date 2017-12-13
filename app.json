@@ -1,0 +1,11 @@
+{
+  "apps": [
+    {
+      "name": "chat-logic-1",
+      "script": "./index.js",
+      "args": "-p=40000",
+      "node_args": "",
+      "max_memory_restart": "2G"
+    }
+  ]
+}
