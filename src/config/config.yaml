@@ -1,6 +1,7 @@
 ---
 
 default: &default
+  ip:
   port: 40000
   cookie_keys: ichat-cookie
   session_keys: ichat-session

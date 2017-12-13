@@ -52,8 +52,8 @@ fs.readdirSync(__dirname).forEach(function (filename) {
 // 载入路由服务
 app.use(router.routes());
 
-app.listen(config.port, function (err) {
-  console.warn('listen on port ' + config.port);
+app.listen(config.port, config.ip, function (err) {
+  console.log('logic serving at ' + config.ip + ':' + config.port);
 });
 
 
